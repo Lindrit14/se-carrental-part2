@@ -19,3 +19,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Generated proto stubs (run ./scripts/gen-proto.sh)
+app/infrastructure/grpc/generated/currency/

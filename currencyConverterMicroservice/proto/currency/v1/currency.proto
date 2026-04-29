@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package currency.v1;
+
+option java_package = "com.uni.currency.grpc.v1";
+option java_multiple_files = true;
+option java_outer_classname = "CurrencyProto";
+
+// CurrencyConverter is a synchronous FX-conversion RPC.
+//
+// Error mapping (status -> meaning):
+//   INVALID_ARGUMENT     -> unknown ISO-4217 code in from_currency / to_currency,
+//                            or a malformed `amount`
+//   FAILED_PRECONDITION  -> ECB rates not yet loaded on the server
+//   INTERNAL             -> unexpected server error
+service CurrencyConverter {
+  rpc Convert(ConvertRequest) returns (ConvertResponse);
+}
+
+message ConvertRequest {
+  // Decimal amount as a string (e.g. "1000.50"). String form preserves
+  // precision across the wire; the server parses with Decimal/BigDecimal.
+  string amount = 1;
+  // ISO-4217 currency code of the source amount, 3 uppercase chars.
+  string from_currency = 2;
+  // ISO-4217 currency code of the target amount, 3 uppercase chars.
+  string to_currency = 3;
+}
+
+message ConvertResponse {
+  // Converted amount as a decimal string.
+  string amount = 1;
+  // Target currency (echoes ConvertRequest.to_currency, normalized).
+  string currency = 2;
+  // Source amount as a decimal string (echoes ConvertRequest.amount).
+  string source_amount = 3;
+  // Source currency (echoes ConvertRequest.from_currency, normalized).
+  string source_currency = 4;
+  // ISO date (YYYY-MM-DD) of the rate set used for the conversion.
+  string rate_date = 5;
+}

@@ -2,11 +2,14 @@
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
 
-# Cache dependencies
+# Cache dependencies. `dependency:go-offline` doesn't fully resolve the
+# protobuf-maven-plugin (it pulls protoc at codegen time), but it still
+# warms the bulk of the dependency tree.
 COPY pom.xml ./
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -q dependency:go-offline
+    mvn -B -q dependency:go-offline || true
 
+COPY proto ./proto
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -q -DskipTests package && \

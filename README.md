@@ -1,16 +1,16 @@
 # Microservices Platform
 
 Three-service Uni project: authentication, car booking, currency conversion.
-Inter-service communication via **RabbitMQ only** (project requirement).
-Frontend ↔ services is REST + JWT.
+Mixed inter-service communication: **RabbitMQ** for asynchronous events,
+**gRPC** for synchronous request/response. Frontend ↔ services is REST + JWT.
 
 ## Services
 
-| Service | Stack | Port | Repo dir |
+| Service | Stack | Ports | Repo dir |
 |---|---|---|---|
-| user-auth | Go + MongoDB | 8080 | `user-authManagement/` |
-| booking | Java 21 / Spring Boot 3 + PostgreSQL | 8082 | `carBookingMicroservice/` |
-| currency-converter | Python 3.12 / FastAPI | 8000 | `currencyConverterMicroservice/` |
+| user-auth | Go + MongoDB | 8080 (HTTP) | `user-authManagement/` |
+| booking | Java 21 / Spring Boot 3 + PostgreSQL | 8082 (HTTP) | `carBookingMicroservice/` |
+| currency-converter | Python 3.12 / FastAPI | 8000 (HTTP), 9000 (gRPC) | `currencyConverterMicroservice/` |
 | RabbitMQ | 3.13 management | 5672 / 15672 | (image) |
 
 ## Communication
@@ -20,19 +20,20 @@ Frontend ↔ services is REST + JWT.
                                │ REST + JWT
        ┌───────────────────────┼─────────────────────────┐
        ▼                       ▼                         ▼
-   user-auth                booking                currency-converter
-       │                       │ ▲                       ▲ │
-       │ user.events           │ │ currency.requests     │ │
-       │ (publish)             │ │ (RPC, AMQP)           │ │
-       └──────────┬────────────┘ └───────────────────────┘ │
-                  ▼                                        │
-              RabbitMQ ◄──────── booking.events ───────────┘
-              (topic exchanges, RPC via Direct-Reply-To)
+   user-auth                booking ───── gRPC ────► currency-converter
+       │                       │                         (Convert)
+       │ user.events           │
+       │ (publish)             │ booking.events
+       └──────────┬────────────┴──────────┐
+                  ▼                       ▼
+                       RabbitMQ
+                  (topic exchanges)
 ```
 
-- `user.*` events: user-auth publishes → booking consumes (creates/updates/anonymizes Customer).
-- `currency.requests`: booking publishes RPC request → currency-converter replies.
-- `booking.*` events: booking publishes (booking.created, booking.cancelled).
+- `user.*` events (RabbitMQ): user-auth publishes → booking consumes (creates/updates/anonymizes Customer).
+- `currency.v1.CurrencyConverter/Convert` (gRPC): booking calls currency-converter synchronously.
+- `booking.*` events (RabbitMQ): booking publishes (booking.created, booking.cancelled).
+- currency-converter has no AMQP connection — it's a gRPC server only (plus its public HTTP API for the frontend).
 
 ## Quickstart
 

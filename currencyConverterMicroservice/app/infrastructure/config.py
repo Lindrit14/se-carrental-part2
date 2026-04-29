@@ -11,10 +11,7 @@ class Settings(BaseSettings):
     http_port: int = Field(default=8000, alias="HTTP_PORT")
     log_level: str = Field(default="info", alias="LOG_LEVEL")
 
-    rabbitmq_url: str = Field(
-        default="amqp://guest:guest@localhost:5672/", alias="RABBITMQ_URL"
-    )
-    rabbitmq_rpc_queue: str = Field(default="currency.requests", alias="RABBITMQ_RPC_QUEUE")
+    grpc_port: int = Field(default=9000, alias="GRPC_PORT")
 
     ecb_feed_url: str = Field(
         default="https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",

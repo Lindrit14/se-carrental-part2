@@ -1,5 +1,5 @@
 """Composition root. Builds adapters, wires the use case, registers HTTP routes,
-and starts the ECB refresher + RabbitMQ-RPC server inside the FastAPI lifespan.
+and starts the ECB refresher + gRPC server inside the FastAPI lifespan.
 """
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.application.convert import ConvertUseCase
 from app.infrastructure.config import Settings
 from app.infrastructure.ecb_provider import ECBRatesProvider
+from app.infrastructure.grpc.server import CurrencyGrpcServer
 from app.infrastructure.logging import configure_logging
-from app.infrastructure.rabbitmq.rpc_server import CurrencyRpcServer
 from app.interfaces.http.api import router
 
 logger = logging.getLogger(__name__)
@@ -30,17 +30,13 @@ def _build_app() -> FastAPI:
         fetch_timeout=settings.ecb_fetch_timeout,
     )
     usecase = ConvertUseCase(rates)
-    rpc = CurrencyRpcServer(
-        amqp_url=settings.rabbitmq_url,
-        queue_name=settings.rabbitmq_rpc_queue,
-        usecase=usecase,
-    )
+    grpc_server = CurrencyGrpcServer(port=settings.grpc_port, usecase=usecase)
 
     @asynccontextmanager
     async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
         logger.info("startup_begin")
         await rates.start()
-        await rpc.start()
+        await grpc_server.start()
         app_.state.rates_provider = rates
         app_.state.convert_usecase = usecase
         logger.info("startup_complete")
@@ -48,7 +44,7 @@ def _build_app() -> FastAPI:
             yield
         finally:
             logger.info("shutdown_begin")
-            await rpc.stop()
+            await grpc_server.stop()
             await rates.stop()
             logger.info("shutdown_complete")
 

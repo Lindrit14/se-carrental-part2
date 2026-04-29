@@ -1,13 +1,15 @@
 # car-booking
 
-Car booking microservice. REST for the frontend, RabbitMQ for talking to
-other services in the platform.
+Car booking microservice. REST for the frontend, mixed transport for talking
+to other services in the platform:
 
-- Consumes `user.*` events from `user-auth` to maintain a `Customer` read model.
-- Calls `currency-converter` via **RabbitMQ-RPC** (`currency.requests` queue) to
-  convert booking totals into the customer's preferred currency.
+- Consumes `user.*` events from `user-auth` via **RabbitMQ** topic exchange
+  to maintain a `Customer` read model.
+- Calls `currency-converter` via **gRPC** (`currency.v1.CurrencyConverter/Convert`,
+  default port `9000`) to convert booking totals into the customer's preferred
+  currency. Proto contract lives in `proto/currency/v1/currency.proto`.
 - Publishes `booking.created` and `booking.cancelled` to its own
-  `booking.events` topic exchange.
+  `booking.events` topic exchange (RabbitMQ).
 
 ## Endpoints (REST, JWT-protected)
 

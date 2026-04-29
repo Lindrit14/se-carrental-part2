@@ -1,14 +1,17 @@
 [project]
 name = "currency-converter"
 version = "0.1.0"
-description = "Currency conversion microservice (FastAPI + RabbitMQ-RPC, ECB rate feed)"
+description = "Currency conversion microservice (FastAPI + gRPC, ECB rate feed)"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
-    "aio-pika>=9.4.3",
+    "grpcio>=1.66.0",
+    "grpcio-status>=1.66.0",
+    "googleapis-common-protos>=1.65.0",
+    "protobuf>=5.28.0",
     "httpx>=0.27.2",
     "python-json-logger>=2.0.7",
 ]
@@ -19,6 +22,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "ruff>=0.7.0",
     "respx>=0.21.1",
+    "grpcio-tools>=1.66.0",
 ]
 
 [tool.ruff]
