@@ -1,0 +1,161 @@
+name: platform
+
+services:
+  # ── Shared Infra ────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: platform-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - rabbit-data:/var/lib/rabbitmq
+    networks: [platform]
+
+  # ── user-auth ──────────────────────────────────────────────────
+  user-auth-mongo:
+    image: mongo:7
+    container_name: platform-user-auth-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [platform]
+
+  user-auth:
+    build:
+      context: ./user-authManagement
+      dockerfile: deploy/docker/Dockerfile
+    image: user-auth:dev
+    container_name: platform-user-auth
+    environment:
+      HTTP_PORT: "8080"
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      MONGO_URI: "mongodb://root:example@user-auth-mongo:27017/?authSource=admin"
+      MONGO_DATABASE: auth
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_EXCHANGE: user.events
+      JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_private.pem
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
+      JWT_ISSUER: user-auth
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+      ADMIN_BOOTSTRAP_EMAIL: "admin@uni.de"
+      ADMIN_BOOTSTRAP_PASSWORD: "ChangeMeChangeMe"
+    volumes:
+      - ./user-authManagement/secrets:/run/secrets:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      user-auth-mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [platform]
+
+  # ── booking ────────────────────────────────────────────────────
+  booking-db:
+    image: postgres:16-alpine
+    container_name: platform-booking-db
+    environment:
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: booking
+      POSTGRES_DB: booking
+    volumes:
+      - booking-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [platform]
+
+  booking:
+    build: ./carBookingMicroservice
+    image: car-booking:dev
+    container_name: platform-booking
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://booking-db:5432/booking
+      SPRING_DATASOURCE_USERNAME: booking
+      SPRING_DATASOURCE_PASSWORD: booking
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
+      CURRENCY_RPC_QUEUE: currency.requests
+      CURRENCY_RPC_TIMEOUT_MS: "5000"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+    volumes:
+      - ./shared-secrets:/run/secrets:ro
+    ports:
+      - "8082:8080"
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [platform]
+
+  # ── currency-converter ─────────────────────────────────────────
+  currency-converter:
+    build: ./currencyConverterMicroservice
+    image: currency-converter:dev
+    container_name: platform-currency-converter
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_RPC_QUEUE: currency.requests
+      ECB_FEED_URL: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
+      ECB_REFRESH_INTERVAL: "3600"
+      HTTP_PORT: "8000"
+      LOG_LEVEL: info
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [platform]
+
+  # ── frontend ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_AUTH_URL: http://localhost:8080
+        VITE_BOOKING_URL: http://localhost:8082
+        VITE_CURRENCY_URL: http://localhost:8000
+    image: frontend:dev
+    container_name: platform-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - user-auth
+      - booking
+      - currency-converter
+    restart: unless-stopped
+    networks: [platform]
+
+volumes:
+  rabbit-data:
+  mongo-data:
+  booking-data:
+
+networks:
+  platform:
+    driver: bridge

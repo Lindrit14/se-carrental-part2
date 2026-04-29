@@ -1,0 +1,14 @@
+# Secrets
+shared-secrets/jwt_private.pem
+shared-secrets/*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log

@@ -1,0 +1,30 @@
+.git
+.github
+.gitignore
+.dockerignore
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+bin/
+dist/
+*.test
+*.out
+coverage.*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Docs / Local
+README.md
+CLAUDE.md
+deploy/azure/
+test/
+
+# Secrets
+secrets/
+*.pem
+*.key

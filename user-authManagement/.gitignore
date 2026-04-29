@@ -1,0 +1,39 @@
+# Binaries
+/bin/
+/dist/
+/server
+*.exe
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Coverage
+coverage.txt
+coverage.html
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / Keys
+secrets/
+*.pem
+*.key
+!deploy/azure/*.bicep
+
+# Build cache
+.cache/

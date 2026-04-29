@@ -1,0 +1,242 @@
+openapi: 3.1.0
+info:
+  title: User / Auth Microservice
+  version: 0.1.0
+  description: |
+    Authentication and profile management. Stateless JWT (RS256) access tokens
+    plus rotating refresh tokens. Domain events are published over RabbitMQ.
+
+servers:
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: auth
+  - name: users
+  - name: health
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      responses:
+        '200': { description: alive }
+
+  /readyz:
+    get:
+      tags: [health]
+      summary: Readiness probe (checks Mongo + RabbitMQ)
+      responses:
+        '200': { description: ready }
+        '503': { description: not ready }
+
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/RegisterResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate access + refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke a refresh token
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LogoutRequest' }
+      responses:
+        '204': { description: revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/auth/password/reset:
+    post:
+      tags: [auth]
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestPasswordResetRequest' }
+      responses:
+        '202': { description: accepted (returns 202 even if email is unknown) }
+
+  /api/v1/auth/password/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm password reset with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmPasswordResetRequest' }
+      responses:
+        '204': { description: password updated }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/users/me:
+    get:
+      tags: [users]
+      summary: Get current user's profile
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/ProfileResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [users]
+      summary: Update profile fields
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileRequest' }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/ProfileResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [users]
+      summary: Delete current user's account
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '204': { description: deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string, minLength: 12 }
+    RegisterResponse:
+      type: object
+      properties:
+        user_id: { type: string }
+        email:   { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+    TokenResponse:
+      type: object
+      properties:
+        access_token:       { type: string }
+        access_expires_at:  { type: string, format: date-time }
+        refresh_token:      { type: string }
+        refresh_expires_at: { type: string, format: date-time }
+        token_type:         { type: string, enum: [Bearer] }
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+
+    RequestPasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ConfirmPasswordResetRequest:
+      type: object
+      required: [reset_token, new_password]
+      properties:
+        reset_token:  { type: string }
+        new_password: { type: string, minLength: 12 }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+    ProfileResponse:
+      type: object
+      properties:
+        id:         { type: string }
+        email:      { type: string }
+        roles:      { type: array, items: { type: string } }
+        verified:   { type: boolean }
+        created_at: { type: string }
+
+    Error:
+      type: object
+      properties:
+        code:    { type: string }
+        message: { type: string }
+        details: {}
+
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid credentials/token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Resource conflict (e.g. email taken)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
