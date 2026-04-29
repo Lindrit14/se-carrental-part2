@@ -1,7 +1,9 @@
 package com.uni.carbooking.interfaces.rest.dto;
 
+import com.uni.carbooking.domain.car.CarCategory;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -12,5 +14,7 @@ public record CreateCarRequest(
         @NotBlank @Size(max = 120) String model,
         @NotBlank @Size(max = 40) String licensePlate,
         @DecimalMin("0.0") BigDecimal dailyRateAmount,
-        @NotBlank @Pattern(regexp = "^[A-Za-z]{3}$") String dailyRateCurrency
+        @NotBlank @Pattern(regexp = "^[A-Za-z]{3}$") String dailyRateCurrency,
+        @NotBlank @Size(max = 160) String location,
+        @NotNull CarCategory category
 ) {}

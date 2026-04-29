@@ -137,6 +137,7 @@ services:
         VITE_AUTH_URL: http://localhost:8080
         VITE_BOOKING_URL: http://localhost:8082
         VITE_CURRENCY_URL: http://localhost:8000
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
     image: frontend:dev
     container_name: platform-frontend
     ports:

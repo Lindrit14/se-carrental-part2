@@ -3,6 +3,7 @@ package com.uni.carbooking.infrastructure.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
@@ -32,6 +33,9 @@ class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/healthz", "/readyz", "/actuator/health/**").permitAll()
+                // Browsing the catalog is public; POST /api/v1/cars (admin add) is still gated
+                // by @PreAuthorize on the controller method.
+                .requestMatchers(HttpMethod.GET, "/api/v1/cars", "/api/v1/cars/**").permitAll()
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().denyAll()
             )

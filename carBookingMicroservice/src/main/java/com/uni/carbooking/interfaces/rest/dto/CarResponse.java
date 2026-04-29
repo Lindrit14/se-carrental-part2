@@ -1,6 +1,7 @@
 package com.uni.carbooking.interfaces.rest.dto;
 
 import com.uni.carbooking.domain.car.Car;
+import com.uni.carbooking.domain.car.CarCategory;
 
 import java.math.BigDecimal;
 
@@ -10,10 +11,15 @@ public record CarResponse(
         String model,
         String licensePlate,
         BigDecimal dailyRateAmount,
-        String dailyRateCurrency
+        String dailyRateCurrency,
+        String location,
+        CarCategory category
 ) {
     public static CarResponse from(Car c) {
-        return new CarResponse(c.id(), c.brand(), c.model(), c.licensePlate(),
-                c.dailyRate().amount(), c.dailyRate().currency());
+        return new CarResponse(
+                c.id(), c.brand(), c.model(), c.licensePlate(),
+                c.dailyRate().amount(), c.dailyRate().currency(),
+                c.location(), c.category()
+        );
     }
 }

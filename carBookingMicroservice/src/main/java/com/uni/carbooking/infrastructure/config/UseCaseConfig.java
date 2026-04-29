@@ -7,6 +7,7 @@ import com.uni.carbooking.application.booking.ListMyBookingsUseCase;
 import com.uni.carbooking.application.car.AddCarUseCase;
 import com.uni.carbooking.application.car.GetCarUseCase;
 import com.uni.carbooking.application.car.ListCarsUseCase;
+import com.uni.carbooking.application.car.SearchCarsUseCase;
 import com.uni.carbooking.application.customer.AnonymizeCustomerUseCase;
 import com.uni.carbooking.application.customer.RegisterCustomerUseCase;
 import com.uni.carbooking.application.customer.UpdateCustomerEmailUseCase;
@@ -28,6 +29,10 @@ class UseCaseConfig {
 
     @Bean ListCarsUseCase listCarsUseCase(CarRepository cars) {
         return new ListCarsUseCase(cars);
+    }
+
+    @Bean SearchCarsUseCase searchCarsUseCase(CarRepository cars) {
+        return new SearchCarsUseCase(cars);
     }
 
     @Bean GetCarUseCase getCarUseCase(CarRepository cars) {

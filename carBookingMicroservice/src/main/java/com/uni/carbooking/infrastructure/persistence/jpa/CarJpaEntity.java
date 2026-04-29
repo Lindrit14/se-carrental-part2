@@ -1,9 +1,12 @@
 package com.uni.carbooking.infrastructure.persistence.jpa;
 
 import com.uni.carbooking.domain.car.Car;
+import com.uni.carbooking.domain.car.CarCategory;
 import com.uni.carbooking.domain.money.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -33,6 +36,13 @@ class CarJpaEntity {
     @Column(name = "daily_rate_currency", nullable = false, length = 3)
     private String dailyRateCurrency;
 
+    @Column(nullable = false, length = 160)
+    private String location;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private CarCategory category;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -46,12 +56,14 @@ class CarJpaEntity {
         e.licensePlate = c.licensePlate();
         e.dailyRateAmount = c.dailyRate().amount();
         e.dailyRateCurrency = c.dailyRate().currency();
+        e.location = c.location();
+        e.category = c.category();
         e.createdAt = c.createdAt();
         return e;
     }
 
     Car toDomain() {
         return new Car(id, brand, model, licensePlate,
-                new Money(dailyRateAmount, dailyRateCurrency), createdAt);
+                new Money(dailyRateAmount, dailyRateCurrency), location, category, createdAt);
     }
 }

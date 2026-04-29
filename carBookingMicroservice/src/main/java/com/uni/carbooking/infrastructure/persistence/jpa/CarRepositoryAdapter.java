@@ -1,9 +1,11 @@
 package com.uni.carbooking.infrastructure.persistence.jpa;
 
 import com.uni.carbooking.domain.car.Car;
+import com.uni.carbooking.domain.car.CarCategory;
 import com.uni.carbooking.domain.car.CarRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,5 +31,12 @@ class CarRepositoryAdapter implements CarRepository {
     @Override
     public List<Car> findAll() {
         return repo.findAll().stream().map(CarJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Car> search(String location, CarCategory category, LocalDate from, LocalDate to) {
+        return repo.search(location, category, from, to).stream()
+                .map(CarJpaEntity::toDomain)
+                .toList();
     }
 }
