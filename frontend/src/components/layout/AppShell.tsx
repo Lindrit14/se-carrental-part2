@@ -10,7 +10,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
       <footer className="border-t border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 text-xs text-zinc-500 lg:px-8">
-          <span>© {new Date().getFullYear()} Drive — Uni demo project</span>
+          <span>© {new Date().getFullYear()} Drive</span>
           <span>v0.1.0</span>
         </div>
       </footer>

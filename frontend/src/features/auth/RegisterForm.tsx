@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,9 +17,17 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function safeReturnTo(raw: string | null): string {
+  if (!raw) return '/cars';
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/cars';
+  return raw;
+}
+
 export function RegisterForm() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const returnTo = safeReturnTo(params.get('returnTo'));
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -33,7 +41,7 @@ export function RegisterForm() {
     try {
       await registerUser(values.email, values.password);
       toast.success('Account created');
-      navigate('/cars', { replace: true });
+      navigate(returnTo, { replace: true });
     } catch (err) {
       const message =
         err instanceof ApiError && err.code === 'email_taken'

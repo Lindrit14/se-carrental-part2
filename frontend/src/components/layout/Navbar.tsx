@@ -10,12 +10,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu';
 import { useAuth } from '@/features/auth/useAuth';
+import { CurrencySelector } from '@/features/currency/CurrencySelector';
 import { cn } from '@/lib/utils/cn';
 
-const NAV_LINKS = [
-  { to: '/cars', label: 'Cars' },
-  { to: '/bookings', label: 'My Bookings' },
-];
+const PUBLIC_LINKS = [{ to: '/cars', label: 'Cars' }];
+const AUTHED_LINKS = [{ to: '/bookings', label: 'My Bookings' }];
 
 export function Navbar() {
   const { session, logout } = useAuth();
@@ -32,44 +31,43 @@ export function Navbar() {
             </span>
             <span className="text-zinc-900">Drive</span>
           </Link>
-          {session && (
-            <nav className="hidden gap-1 md:flex">
-              {NAV_LINKS.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-zinc-100 text-zinc-900'
-                        : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
-                    )
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              ))}
-              {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-zinc-100 text-zinc-900'
-                        : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
-                    )
-                  }
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" /> Admin
-                </NavLink>
-              )}
-            </nav>
-          )}
+          <nav className="hidden gap-1 md:flex">
+            {[...PUBLIC_LINKS, ...(session ? AUTHED_LINKS : [])].map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className={({ isActive }) =>
+                  cn(
+                    'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-zinc-100 text-zinc-900'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
+                  )
+                }
+              >
+                {l.label}
+              </NavLink>
+            ))}
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-zinc-100 text-zinc-900'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
+                  )
+                }
+              >
+                <ShieldCheck className="h-3.5 w-3.5" /> Admin
+              </NavLink>
+            )}
+          </nav>
         </div>
 
         <div className="flex items-center gap-2">
+          <CurrencySelector />
           {session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

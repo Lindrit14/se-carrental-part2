@@ -1,8 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthLayout } from './AuthLayout';
 import { RegisterForm } from '@/features/auth/RegisterForm';
 
 export function RegisterPage() {
+  const location = useLocation();
+  const loginHref = `/login${location.search}`;
+
   return (
     <AuthLayout
       title="Create your account"
@@ -10,7 +13,7 @@ export function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-zinc-900 hover:underline">
+          <Link to={loginHref} className="font-medium text-zinc-900 hover:underline">
             Sign in
           </Link>
         </>

@@ -15,24 +15,16 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { FormError, FormField, FormHelp, FormLabel } from '@/components/ui/Form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select';
+import { Price } from '@/components/ui/Price';
 import type { Car } from '@/domain/car';
+import { useDisplayCurrency } from '@/features/currency/useDisplayCurrency';
 import { useCreateBooking } from './useBookings';
 import { ApiError } from '@/lib/api/errors';
-
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'];
 
 const schema = z
   .object({
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required'),
-    targetCurrency: z.string().regex(/^[A-Z]{3}$/, 'Pick a currency'),
   })
   .refine((v) => v.endDate > v.startDate, {
     message: 'End date must be after start date',
@@ -45,34 +37,53 @@ interface CreateBookingDialogProps {
   car: Car | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultStartDate?: string;
+  defaultEndDate?: string;
 }
 
-export function CreateBookingDialog({ car, open, onOpenChange }: CreateBookingDialogProps) {
+export function CreateBookingDialog({
+  car,
+  open,
+  onOpenChange,
+  defaultStartDate,
+  defaultEndDate,
+}: CreateBookingDialogProps) {
   const create = useCreateBooking();
   const navigate = useNavigate();
+  const { displayCurrency } = useDisplayCurrency();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
+  const initialStart = defaultStartDate || today;
+  const initialEnd = defaultEndDate || '';
 
   const {
     register,
     handleSubmit,
     reset,
-    setValue,
     watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { startDate: today, endDate: '', targetCurrency: car?.dailyRate.currency ?? 'EUR' },
+    defaultValues: { startDate: initialStart, endDate: initialEnd },
   });
 
-  // Reset form whenever the target car changes.
+  // Reset form whenever the target car or default dates change.
   useEffect(() => {
     if (car) {
-      reset({ startDate: today, endDate: '', targetCurrency: car.dailyRate.currency });
+      reset({ startDate: initialStart, endDate: initialEnd });
       setServerError(null);
     }
-  }, [car, reset, today]);
+  }, [car, reset, initialStart, initialEnd]);
+
+  const startDate = watch('startDate');
+  const endDate = watch('endDate');
+  const days =
+    startDate && endDate && endDate > startDate
+      ? Math.round(
+          (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24),
+        )
+      : 0;
 
   const onSubmit = handleSubmit(async (values) => {
     if (!car) return;
@@ -82,7 +93,7 @@ export function CreateBookingDialog({ car, open, onOpenChange }: CreateBookingDi
         carId: car.id,
         startDate: values.startDate,
         endDate: values.endDate,
-        targetCurrency: values.targetCurrency,
+        targetCurrency: displayCurrency,
       });
       toast.success('Booking confirmed');
       onOpenChange(false);
@@ -98,16 +109,14 @@ export function CreateBookingDialog({ car, open, onOpenChange }: CreateBookingDi
 
   if (!car) return null;
 
-  const targetCurrency = watch('targetCurrency');
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Book {car.brand} {car.model}</DialogTitle>
           <DialogDescription>
-            Daily rate: {car.dailyRate.amount} {car.dailyRate.currency}. We'll convert the
-            total to your preferred currency.
+            Daily rate: {car.dailyRate.amount} {car.dailyRate.currency}. Total will be charged
+            in {displayCurrency} (set in the navbar).
           </DialogDescription>
         </DialogHeader>
 
@@ -138,28 +147,25 @@ export function CreateBookingDialog({ car, open, onOpenChange }: CreateBookingDi
             </FormField>
           </div>
 
-          <FormField>
-            <FormLabel>Total currency</FormLabel>
-            <Select
-              value={targetCurrency}
-              onValueChange={(v) => setValue('targetCurrency', v, { shouldValidate: true })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pick a currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormHelp>
-              The booking total will be converted via the currency-converter service.
-            </FormHelp>
-            <FormError>{errors.targetCurrency?.message}</FormError>
-          </FormField>
+          {days > 0 && (
+            <div className="flex items-baseline justify-between rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+              <span className="text-sm text-zinc-600">
+                Estimated total ({days} day{days === 1 ? '' : 's'})
+              </span>
+              <Price
+                source={{
+                  amount: (Number(car.dailyRate.amount) * days).toFixed(2),
+                  currency: car.dailyRate.currency,
+                }}
+                hideOriginal
+              />
+            </div>
+          )}
+
+          <FormHelp>
+            The booking total will be locked in at the current ECB reference rate by the
+            currency-converter service.
+          </FormHelp>
 
           {serverError && (
             <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">

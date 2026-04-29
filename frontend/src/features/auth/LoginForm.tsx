@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,9 +17,18 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+// Only honor relative paths to avoid open-redirect risk.
+function safeReturnTo(raw: string | null): string {
+  if (!raw) return '/cars';
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/cars';
+  return raw;
+}
+
 export function LoginForm() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const returnTo = safeReturnTo(params.get('returnTo'));
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -33,7 +42,7 @@ export function LoginForm() {
     try {
       await login(values.email, values.password);
       toast.success('Welcome back');
-      navigate('/cars', { replace: true });
+      navigate(returnTo, { replace: true });
     } catch (err) {
       const message =
         err instanceof ApiError && err.code === 'invalid_credentials'

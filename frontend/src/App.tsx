@@ -1,6 +1,8 @@
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { CurrencyProvider } from '@/features/currency/CurrencyContext';
+import GoogleMapsProvider from '@/features/maps/GoogleMapsProvider';
 import { Toaster } from '@/components/ui/Toaster';
 import { AppRouter } from '@/routes/AppRouter';
 
@@ -19,8 +21,12 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <AppRouter />
-          <Toaster />
+          <CurrencyProvider>
+            <GoogleMapsProvider>
+              <AppRouter />
+              <Toaster />
+            </GoogleMapsProvider>
+          </CurrencyProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

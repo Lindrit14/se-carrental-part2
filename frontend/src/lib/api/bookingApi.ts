@@ -1,5 +1,5 @@
 import type { Booking, BookingStatus } from '@/domain/booking';
-import type { Car } from '@/domain/car';
+import type { Car, CarCategory } from '@/domain/car';
 import { request } from './client';
 
 /* ---------- Wire DTOs (camelCase from the Java backend) ---------- */
@@ -11,6 +11,8 @@ interface CarDto {
   licensePlate: string;
   dailyRateAmount: string | number;
   dailyRateCurrency: string;
+  location: string;
+  category: CarCategory;
 }
 
 interface BookingDto {
@@ -56,6 +58,8 @@ const toCar = (dto: CarDto): Car => ({
   model: dto.model,
   licensePlate: dto.licensePlate,
   dailyRate: { amount: String(dto.dailyRateAmount), currency: dto.dailyRateCurrency },
+  location: dto.location,
+  category: dto.category,
 });
 
 const toBooking = (dto: BookingDto): Booking => ({
@@ -83,16 +87,37 @@ export interface CreateCarInput {
   licensePlate: string;
   dailyRateAmount: string;
   dailyRateCurrency: string;
+  location: string;
+  category: CarCategory;
+}
+
+export interface SearchCarsInput {
+  location?: string;
+  category?: CarCategory;
+  from?: string;
+  to?: string;
 }
 
 export const bookingApi = {
   async listCars(): Promise<Car[]> {
-    const dtos = await request<CarDto[]>('booking', '/api/v1/cars');
+    const dtos = await request<CarDto[]>('booking', '/api/v1/cars', { auth: false });
+    return dtos.map(toCar);
+  },
+
+  async searchCars(input: SearchCarsInput): Promise<Car[]> {
+    const params = new URLSearchParams();
+    if (input.location) params.set('location', input.location);
+    if (input.category) params.set('category', input.category);
+    if (input.from) params.set('from', input.from);
+    if (input.to) params.set('to', input.to);
+    const query = params.toString();
+    const path = `/api/v1/cars/search${query ? `?${query}` : ''}`;
+    const dtos = await request<CarDto[]>('booking', path, { auth: false });
     return dtos.map(toCar);
   },
 
   async getCar(id: string): Promise<Car> {
-    const dto = await request<CarDto>('booking', `/api/v1/cars/${id}`);
+    const dto = await request<CarDto>('booking', `/api/v1/cars/${id}`, { auth: false });
     return toCar(dto);
   },
 

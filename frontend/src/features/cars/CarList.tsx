@@ -1,16 +1,16 @@
-import { useState } from 'react';
 import { Car as CarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CarCard } from './CarCard';
 import { useCars } from './useCars';
-import type { Car } from '@/domain/car';
-import { CreateBookingDialog } from '@/features/bookings/CreateBookingDialog';
 
+/**
+ * Admin-only list of every car. Public car browsing happens through
+ * {@code CarSearchResultsPage} + {@code CarResultsList}.
+ */
 export function CarList() {
   const { data, isLoading, isError, refetch } = useCars();
-  const [bookingCar, setBookingCar] = useState<Car | null>(null);
 
   if (isLoading) {
     return (
@@ -37,32 +37,17 @@ export function CarList() {
     return (
       <EmptyState
         icon={<CarIcon className="h-8 w-8" />}
-        title="No cars available"
-        description="Check back later — our fleet is being restocked."
+        title="No cars in the fleet"
+        description="Add a car to get started."
       />
     );
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {data.map((car) => (
-          <CarCard
-            key={car.id}
-            car={car}
-            action={
-              <Button size="sm" className="w-full" onClick={() => setBookingCar(car)}>
-                Book this car
-              </Button>
-            }
-          />
-        ))}
-      </div>
-      <CreateBookingDialog
-        car={bookingCar}
-        open={Boolean(bookingCar)}
-        onOpenChange={(open) => !open && setBookingCar(null)}
-      />
-    </>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {data.map((car) => (
+        <CarCard key={car.id} car={car} showLicensePlate />
+      ))}
+    </div>
   );
 }

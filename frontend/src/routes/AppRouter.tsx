@@ -5,7 +5,8 @@ import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { PasswordResetRequestPage } from '@/pages/PasswordResetRequestPage';
 import { PasswordResetConfirmPage } from '@/pages/PasswordResetConfirmPage';
-import { CarsPage } from '@/pages/CarsPage';
+import { CarSearchResultsPage } from '@/pages/CarSearchResultsPage';
+import { BookCarPage } from '@/pages/BookCarPage';
 import { BookingsPage } from '@/pages/BookingsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -32,11 +33,12 @@ export function AppRouter() {
       {/* App routes (shared shell) */}
       <Route element={<AppShellRoute />}>
         <Route index element={<HomePage />} />
+        <Route path="/cars" element={<CarSearchResultsPage />} />
         <Route
-          path="/cars"
+          path="/cars/:carId/book"
           element={
             <ProtectedRoute>
-              <CarsPage />
+              <BookCarPage />
             </ProtectedRoute>
           }
         />
