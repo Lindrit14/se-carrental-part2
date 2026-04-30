@@ -38,6 +38,13 @@ func NewOutboxRepository(db *mongo.Database) *OutboxRepository {
 
 // EnsureOutboxIndexes creates the indexes used by the publisher hot path.
 // Safe to call repeatedly; Mongo is idempotent on identical index specs.
+//
+// We can't use a partial index filtered to unpublished rows: MongoDB's
+// partial-filter expressions don't support $exists:false (it desugars to
+// $not, which is excluded from the allow-list). A plain index on
+// occurred_at is fine — published rows are filtered out by the relay's
+// find query, and the relay drains rows within ~1s of insertion so the
+// unpublished portion of the collection stays small.
 func EnsureOutboxIndexes(ctx context.Context, db *mongo.Database) error {
 	col := db.Collection(outboxCollection)
 	_, err := col.Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -46,12 +53,8 @@ func EnsureOutboxIndexes(ctx context.Context, db *mongo.Database) error {
 			Options: options.Index().SetUnique(true).SetName("uniq_event_id"),
 		},
 		{
-			// Partial index — only unpublished rows. Keeps the index small and the
-			// pending-events scan cheap even after millions of historical rows.
-			Keys: bson.D{{Key: "occurred_at", Value: 1}},
-			Options: options.Index().
-				SetName("pending_by_occurred_at").
-				SetPartialFilterExpression(bson.M{"published_at": bson.M{"$exists": false}}),
+			Keys:    bson.D{{Key: "occurred_at", Value: 1}},
+			Options: options.Index().SetName("by_occurred_at"),
 		},
 	})
 	return err
