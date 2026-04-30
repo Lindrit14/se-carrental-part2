@@ -121,7 +121,7 @@ The biggest structural change. Doing it before the gateway means the gateway onl
 
 ---
 
-## Phase 2 — Notification Service (2–3 days)
+## Phase 2 — Notification Service (2–3 days) ✅ DONE (2026-04-30)
 
 **Goal:** Add the 5th service. Pure RabbitMQ consumer in Go.
 

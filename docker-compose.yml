@@ -176,6 +176,23 @@ services:
     restart: unless-stopped
     networks: [platform]
 
+  # ── notification ──────────────────────────────────────────────
+  notification:
+    build: ./notificationMicroservice
+    image: notification-service:dev
+    container_name: platform-notification
+    environment:
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      HTTP_PORT: "8084"
+      NOTIFIER_TYPE: mock
+    ports:
+      - "8084:8084"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [platform]
+
   # ── frontend ──────────────────────────────────────────────────
   frontend:
     build:
