@@ -30,6 +30,15 @@ def liveness() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@router.get("/readyz")
+def readiness(request: Request) -> dict[str, str]:
+    try:
+        _rates(request).current()
+        return {"status": "ok"}
+    except RatesUnavailable as exc:
+        raise HTTPException(status_code=503, detail="rates not loaded") from exc
+
+
 @router.get("/api/v1/rates", response_model=RatesResponse)
 def get_rates(request: Request) -> RatesResponse:
     try:

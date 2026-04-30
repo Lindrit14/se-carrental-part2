@@ -126,6 +126,12 @@ services:
     ports:
       - "8000:8000"
       - "9000:9000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
     networks: [platform]
 
@@ -143,9 +149,12 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - user-auth
-      - booking
-      - currency-converter
+      currency-converter:
+        condition: service_healthy
+      user-auth:
+        condition: service_started
+      booking:
+        condition: service_started
     restart: unless-stopped
     networks: [platform]
 
