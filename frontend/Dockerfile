@@ -3,13 +3,9 @@ FROM node:20-alpine AS builder
 WORKDIR /build
 
 # Build args become Vite env vars at build time. Override per-environment.
-ARG VITE_AUTH_URL=http://localhost:8080
-ARG VITE_BOOKING_URL=http://localhost:8082
-ARG VITE_CURRENCY_URL=http://localhost:8000
+ARG VITE_API_URL=http://localhost:8080
 ARG VITE_GOOGLE_MAPS_API_KEY=
-ENV VITE_AUTH_URL=$VITE_AUTH_URL \
-    VITE_BOOKING_URL=$VITE_BOOKING_URL \
-    VITE_CURRENCY_URL=$VITE_CURRENCY_URL \
+ENV VITE_API_URL=$VITE_API_URL \
     VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 
 COPY package.json package-lock.json* ./

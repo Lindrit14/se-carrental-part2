@@ -1,0 +1,6 @@
+/Users/lindritprekaj/projects/microservices/apiGateway/src/main/java/com/uni/gateway/ApiGatewayApplication.java
+/Users/lindritprekaj/projects/microservices/apiGateway/src/main/java/com/uni/gateway/filter/CorrelationIdFilter.java
+/Users/lindritprekaj/projects/microservices/apiGateway/src/main/java/com/uni/gateway/filter/CorsConfig.java
+/Users/lindritprekaj/projects/microservices/apiGateway/src/main/java/com/uni/gateway/filter/RateLimitConfig.java
+/Users/lindritprekaj/projects/microservices/apiGateway/src/main/java/com/uni/gateway/filter/SecurityConfig.java
+/Users/lindritprekaj/projects/microservices/apiGateway/src/main/java/com/uni/gateway/filter/UserClaimsForwardFilter.java

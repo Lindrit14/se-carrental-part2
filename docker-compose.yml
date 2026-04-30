@@ -6,8 +6,7 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: platform-rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "15672:15672"   # management UI only — AMQP 5672 stays internal
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -15,6 +14,52 @@ services:
       retries: 20
     volumes:
       - rabbit-data:/var/lib/rabbitmq
+    networks: [platform]
+
+  redis:
+    image: redis:7-alpine
+    container_name: platform-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis-data:/data
+    networks: [platform]
+
+  # ── api-gateway ────────────────────────────────────────────────
+  api-gateway:
+    build: ./apiGateway
+    image: api-gateway:dev
+    container_name: platform-api-gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      HTTP_PORT: "8080"
+      USER_AUTH_URL: http://user-auth:8081
+      CAR_SERVICE_URL: http://car-service:8082
+      BOOKING_SERVICE_URL: http://booking:8080
+      CURRENCY_SERVICE_URL: http://currency-converter:8000
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+    volumes:
+      - ./shared-secrets:/run/secrets:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      user-auth:
+        condition: service_started
+      car-service:
+        condition: service_started
+      booking:
+        condition: service_started
+      currency-converter:
+        condition: service_healthy
+    restart: unless-stopped
     networks: [platform]
 
   # ── user-auth ──────────────────────────────────────────────────
@@ -40,7 +85,7 @@ services:
     image: user-auth:dev
     container_name: platform-user-auth
     environment:
-      HTTP_PORT: "8080"
+      HTTP_PORT: "8081"
       LOG_LEVEL: info
       LOG_FORMAT: json
       MONGO_URI: "mongodb://root:example@user-auth-mongo:27017/?authSource=admin"
@@ -50,13 +95,12 @@ services:
       JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_private.pem
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
       JWT_ISSUER: user-auth
-      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
       ADMIN_BOOTSTRAP_EMAIL: "admin@uni.de"
       ADMIN_BOOTSTRAP_PASSWORD: "ChangeMeChangeMe"
     volumes:
       - ./user-authManagement/secrets:/run/secrets:ro
-    ports:
-      - "8080:8080"
+    expose:
+      - "8081"
     depends_on:
       user-auth-mongo:
         condition: service_healthy
@@ -92,11 +136,10 @@ services:
       SPRING_DATASOURCE_USERNAME: car
       SPRING_DATASOURCE_PASSWORD: car
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
-      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
     volumes:
       - ./shared-secrets:/run/secrets:ro
-    ports:
-      - "8082:8082"
+    expose:
+      - "8082"
     depends_on:
       cars-db:
         condition: service_healthy
@@ -137,11 +180,10 @@ services:
       CURRENCY_CONVERTER_GRPC_ADDRESS: currency-converter:9000
       CURRENCY_CONVERTER_GRPC_DEADLINE_MS: "5000"
       CAR_SERVICE_URL: http://car-service:8082
-      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
     volumes:
       - ./shared-secrets:/run/secrets:ro
-    ports:
-      - "8083:8080"
+    expose:
+      - "8080"
     depends_on:
       booking-db:
         condition: service_healthy
@@ -163,10 +205,9 @@ services:
       HTTP_PORT: "8000"
       GRPC_PORT: "9000"
       LOG_LEVEL: info
-      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
-    ports:
-      - "8000:8000"
-      - "9000:9000"
+    expose:
+      - "8000"
+      - "9000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
       interval: 10s
@@ -185,8 +226,8 @@ services:
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
       HTTP_PORT: "8084"
       NOTIFIER_TYPE: mock
-    ports:
-      - "8084:8084"
+    expose:
+      - "8084"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -198,26 +239,21 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_AUTH_URL: http://localhost:8080
-        VITE_BOOKING_URL: http://localhost:8083
-        VITE_CURRENCY_URL: http://localhost:8000
+        VITE_API_URL: http://localhost:8080
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
     image: frontend:dev
     container_name: platform-frontend
     ports:
       - "3000:80"
     depends_on:
-      currency-converter:
-        condition: service_healthy
-      user-auth:
-        condition: service_started
-      booking:
+      api-gateway:
         condition: service_started
     restart: unless-stopped
     networks: [platform]
 
 volumes:
   rabbit-data:
+  redis-data:
   mongo-data:
   cars-data:
   booking-data:

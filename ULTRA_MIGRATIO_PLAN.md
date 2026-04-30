@@ -148,7 +148,7 @@ The biggest structural change. Doing it before the gateway means the gateway onl
 
 ---
 
-## Phase 3 — API Gateway (Spring Cloud Gateway) (3–4 days)
+## Phase 3 — API Gateway (Spring Cloud Gateway) (3–4 days) ✅ DONE (2026-04-30)
 
 **Goal:** Single entry point. Frontend talks to **one** URL.
 
