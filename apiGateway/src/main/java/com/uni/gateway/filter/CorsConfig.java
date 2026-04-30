@@ -4,15 +4,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * Single CORS source for the whole platform. Per ADR-0003, downstream services
- * stop configuring CORS — only the gateway answers preflight requests.
+ * Single CORS source for the platform. Exposed as a bean so SecurityConfig
+ * can register it inside the security filter chain — that way CORS headers
+ * also appear on Spring Security's error responses (401, 403, etc.). A
+ * standalone CorsWebFilter would run *after* security and miss those.
  */
 @Configuration
 public class CorsConfig {
@@ -21,7 +23,7 @@ public class CorsConfig {
     private String allowedOrigins;
 
     @Bean
-    CorsWebFilter corsWebFilter() {
+    CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
@@ -37,6 +39,6 @@ public class CorsConfig {
 
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-        return new CorsWebFilter(source);
+        return source;
     }
 }

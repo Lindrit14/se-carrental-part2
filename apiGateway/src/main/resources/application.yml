@@ -24,22 +24,22 @@ spring:
         - id: user-auth
           uri: ${USER_AUTH_URL:http://localhost:8081}
           predicates:
-            - Path=/api/v1/auth/**,/api/v1/users/**,/api/v1/admin/**
+            - Path=/api/v1/auth/**,/api/v1/users/**,/api/v1/admin/users,/api/v1/admin/users/**
 
         - id: cars
           uri: ${CAR_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/api/v1/cars/**
+            - Path=/api/v1/cars,/api/v1/cars/**
 
         - id: bookings
           uri: ${BOOKING_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/api/v1/bookings/**
+            - Path=/api/v1/bookings,/api/v1/bookings/**,/api/v1/admin/bookings,/api/v1/admin/bookings/**
 
         - id: currency-http
           uri: ${CURRENCY_SERVICE_URL:http://localhost:8000}
           predicates:
-            - Path=/api/v1/rates/**,/api/v1/convert/**
+            - Path=/api/v1/rates,/api/v1/rates/**,/api/v1/convert,/api/v1/convert/**
 
   security:
     oauth2:
