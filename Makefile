@@ -11,7 +11,8 @@ up: ## Build and start the full platform
 	$(COMPOSE) up -d --build
 	@echo
 	@echo "  user-auth         : http://localhost:8080"
-	@echo "  booking           : http://localhost:8082"
+	@echo "  car-service       : http://localhost:8082"
+	@echo "  booking           : http://localhost:8083"
 	@echo "  currency-converter: http://localhost:8000"
 	@echo "  RabbitMQ UI       : http://localhost:15672 (guest/guest)"
 

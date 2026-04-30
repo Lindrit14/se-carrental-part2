@@ -7,6 +7,9 @@ import java.math.BigDecimal;
 public record BookingResponse(
         String id,
         String carId,
+        String carBrand,
+        String carModel,
+        String carLicensePlate,
         String startDate,
         String endDate,
         String status,
@@ -19,6 +22,9 @@ public record BookingResponse(
         return new BookingResponse(
                 b.id(),
                 b.carId(),
+                b.carSnapshot().brand(),
+                b.carSnapshot().model(),
+                b.carSnapshot().licensePlate(),
                 b.startDate().toString(),
                 b.endDate().toString(),
                 b.status().name(),

@@ -8,5 +8,4 @@ public interface BookingRepository {
     Optional<Booking> findById(String id);
     List<Booking> findByCustomerId(String customerId);
     List<Booking> findAll();
-    boolean existsForCar(String carId);
 }

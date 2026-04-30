@@ -65,6 +65,44 @@ services:
     restart: unless-stopped
     networks: [platform]
 
+  # ── cars-db + car-service ──────────────────────────────────────
+  cars-db:
+    image: postgres:16-alpine
+    container_name: platform-cars-db
+    environment:
+      POSTGRES_USER: car
+      POSTGRES_PASSWORD: car
+      POSTGRES_DB: cars_db
+    volumes:
+      - cars-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U car"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [platform]
+
+  car-service:
+    build: ./carMicroservice
+    image: car-service:dev
+    container_name: platform-car-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cars-db:5432/cars_db
+      SPRING_DATASOURCE_USERNAME: car
+      SPRING_DATASOURCE_PASSWORD: car
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
+    volumes:
+      - ./shared-secrets:/run/secrets:ro
+    ports:
+      - "8082:8082"
+    depends_on:
+      cars-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [platform]
+
   # ── booking ────────────────────────────────────────────────────
   booking-db:
     image: postgres:16-alpine
@@ -98,16 +136,19 @@ services:
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
       CURRENCY_CONVERTER_GRPC_ADDRESS: currency-converter:9000
       CURRENCY_CONVERTER_GRPC_DEADLINE_MS: "5000"
+      CAR_SERVICE_URL: http://car-service:8082
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173"
     volumes:
       - ./shared-secrets:/run/secrets:ro
     ports:
-      - "8082:8080"
+      - "8083:8080"
     depends_on:
       booking-db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      car-service:
+        condition: service_started
     restart: unless-stopped
     networks: [platform]
 
@@ -141,7 +182,7 @@ services:
       context: ./frontend
       args:
         VITE_AUTH_URL: http://localhost:8080
-        VITE_BOOKING_URL: http://localhost:8082
+        VITE_BOOKING_URL: http://localhost:8083
         VITE_CURRENCY_URL: http://localhost:8000
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
     image: frontend:dev
@@ -161,6 +202,7 @@ services:
 volumes:
   rabbit-data:
   mongo-data:
+  cars-data:
   booking-data:
 
 networks:

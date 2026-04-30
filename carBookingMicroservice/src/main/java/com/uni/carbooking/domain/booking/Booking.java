@@ -1,5 +1,6 @@
 package com.uni.carbooking.domain.booking;
 
+import com.uni.carbooking.domain.car.CarSnapshot;
 import com.uni.carbooking.domain.error.InvalidDateRange;
 import com.uni.carbooking.domain.money.Money;
 
@@ -11,7 +12,7 @@ import java.util.Objects;
 public class Booking {
     private final String id;
     private final String customerId;
-    private final String carId;
+    private final CarSnapshot carSnapshot;
     private final LocalDate startDate;
     private final LocalDate endDate;
     private BookingStatus status;
@@ -20,7 +21,7 @@ public class Booking {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    public Booking(String id, String customerId, String carId,
+    public Booking(String id, String customerId, CarSnapshot carSnapshot,
                    LocalDate startDate, LocalDate endDate, BookingStatus status,
                    Money totalSource, Money totalTarget,
                    Instant createdAt, Instant updatedAt) {
@@ -29,7 +30,7 @@ public class Booking {
         }
         this.id = Objects.requireNonNull(id);
         this.customerId = Objects.requireNonNull(customerId);
-        this.carId = Objects.requireNonNull(carId);
+        this.carSnapshot = Objects.requireNonNull(carSnapshot);
         this.startDate = startDate;
         this.endDate = endDate;
         this.status = Objects.requireNonNull(status);
@@ -41,7 +42,9 @@ public class Booking {
 
     public String id() { return id; }
     public String customerId() { return customerId; }
-    public String carId() { return carId; }
+    public CarSnapshot carSnapshot() { return carSnapshot; }
+    /** Convenience accessor — the car's original ID. */
+    public String carId() { return carSnapshot.carId(); }
     public LocalDate startDate() { return startDate; }
     public LocalDate endDate() { return endDate; }
     public BookingStatus status() { return status; }
