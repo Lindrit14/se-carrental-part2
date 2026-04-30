@@ -14,11 +14,14 @@ spring:
   cloud:
     gateway:
       default-filters:
-        # Downstream services still set their own CORS headers in addition to
-        # the gateway's; browsers reject duplicate Access-Control-Allow-Origin
-        # values. RETAIN_UNIQUE dedupes within each header. (Removing CORS
-        # from downstream services is a Phase 5 cleanup — gateway owns CORS.)
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Expose-Headers Vary, RETAIN_UNIQUE
+        # Downstream services still set their own CORS headers; the gateway
+        # adds its own on top. RETAIN_FIRST keeps the gateway's value (which
+        # is added before the downstream's bubbles up) and discards any
+        # conflicting values like the wildcard '*' that user-auth's Go
+        # middleware emits by default.
+        # (Removing CORS from downstream services is a Phase 5 cleanup —
+        # gateway owns CORS per ADR-0003.)
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Expose-Headers Vary, RETAIN_FIRST
         - name: RequestRateLimiter
           args:
             redis-rate-limiter.replenishRate: 100
