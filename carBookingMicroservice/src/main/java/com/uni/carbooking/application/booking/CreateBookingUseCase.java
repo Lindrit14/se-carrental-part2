@@ -13,6 +13,7 @@ import com.uni.carbooking.domain.car.CarSnapshot;
 import com.uni.carbooking.domain.customer.Customer;
 import com.uni.carbooking.domain.customer.CustomerRepository;
 import com.uni.carbooking.domain.error.CustomerNotFound;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -46,6 +47,7 @@ public class CreateBookingUseCase {
             String targetCurrency
     ) {}
 
+    @Transactional
     public Booking execute(Input in) {
         Customer customer = customers.findByExternalUserId(in.externalUserId())
                 .orElseThrow(() -> new CustomerNotFound(in.externalUserId()));

@@ -10,6 +10,7 @@ import com.uni.carbooking.domain.customer.CustomerRepository;
 import com.uni.carbooking.domain.error.BookingNotFound;
 import com.uni.carbooking.domain.error.BookingNotOwned;
 import com.uni.carbooking.domain.error.CustomerNotFound;
+import org.springframework.transaction.annotation.Transactional;
 
 public class CancelBookingUseCase {
 
@@ -26,6 +27,7 @@ public class CancelBookingUseCase {
         this.clock = clock;
     }
 
+    @Transactional
     public void execute(String bookingId, String externalUserId) {
         Customer customer = customers.findByExternalUserId(externalUserId)
                 .orElseThrow(() -> new CustomerNotFound(externalUserId));
