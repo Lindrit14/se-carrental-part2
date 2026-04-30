@@ -2,8 +2,8 @@ package com.uni.carbooking.interfaces.rest.error;
 
 import com.uni.carbooking.domain.error.BookingNotFound;
 import com.uni.carbooking.domain.error.BookingNotOwned;
-import com.uni.carbooking.domain.error.CarHasBookings;
 import com.uni.carbooking.domain.error.CarNotFound;
+import com.uni.carbooking.domain.error.CarServiceUnavailable;
 import com.uni.carbooking.domain.error.CurrencyConversionFailed;
 import com.uni.carbooking.domain.error.CustomerNotFound;
 import com.uni.carbooking.domain.error.InvalidDateRange;
@@ -21,7 +21,7 @@ class RestExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(RestExceptionHandler.class);
 
-    @ExceptionHandler({CarNotFound.class, BookingNotFound.class, CustomerNotFound.class})
+    @ExceptionHandler({BookingNotFound.class, CustomerNotFound.class, CarNotFound.class})
     ResponseEntity<ErrorResponse> notFound(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("not_found", e.getMessage()));
@@ -31,12 +31,6 @@ class RestExceptionHandler {
     ResponseEntity<ErrorResponse> notOwned(BookingNotOwned e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse("forbidden", e.getMessage()));
-    }
-
-    @ExceptionHandler(CarHasBookings.class)
-    ResponseEntity<ErrorResponse> carHasBookings(CarHasBookings e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("car_has_bookings", e.getMessage()));
     }
 
     @ExceptionHandler(InvalidDateRange.class)
@@ -50,6 +44,13 @@ class RestExceptionHandler {
         log.warn("currency conversion failed: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("currency_conversion_failed", e.getMessage()));
+    }
+
+    @ExceptionHandler(CarServiceUnavailable.class)
+    ResponseEntity<ErrorResponse> carServiceDown(CarServiceUnavailable e) {
+        log.warn("car service unavailable: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse("car_service_unavailable", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

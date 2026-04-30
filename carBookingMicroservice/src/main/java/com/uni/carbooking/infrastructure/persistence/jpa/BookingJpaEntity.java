@@ -2,6 +2,7 @@ package com.uni.carbooking.infrastructure.persistence.jpa;
 
 import com.uni.carbooking.domain.booking.Booking;
 import com.uni.carbooking.domain.booking.BookingStatus;
+import com.uni.carbooking.domain.car.CarSnapshot;
 import com.uni.carbooking.domain.money.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,8 +26,24 @@ class BookingJpaEntity {
     @Column(name = "customer_id", nullable = false, length = 36)
     private String customerId;
 
+    // Historical reference only — no FK constraint (car lives in a separate service/DB).
     @Column(name = "car_id", nullable = false, length = 36)
     private String carId;
+
+    @Column(name = "car_brand", nullable = false, length = 80)
+    private String carBrand;
+
+    @Column(name = "car_model", nullable = false, length = 120)
+    private String carModel;
+
+    @Column(name = "car_license_plate", nullable = false, length = 40)
+    private String carLicensePlate;
+
+    @Column(name = "daily_rate_snapshot_amount", nullable = false, precision = 19, scale = 4)
+    private BigDecimal dailyRateSnapshotAmount;
+
+    @Column(name = "daily_rate_snapshot_currency", nullable = false, length = 3)
+    private String dailyRateSnapshotCurrency;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -62,7 +79,12 @@ class BookingJpaEntity {
         var e = new BookingJpaEntity();
         e.id = b.id();
         e.customerId = b.customerId();
-        e.carId = b.carId();
+        e.carId = b.carSnapshot().carId();
+        e.carBrand = b.carSnapshot().brand();
+        e.carModel = b.carSnapshot().model();
+        e.carLicensePlate = b.carSnapshot().licensePlate();
+        e.dailyRateSnapshotAmount = b.carSnapshot().dailyRate().amount();
+        e.dailyRateSnapshotCurrency = b.carSnapshot().dailyRate().currency();
         e.startDate = b.startDate();
         e.endDate = b.endDate();
         e.status = b.status();
@@ -76,7 +98,11 @@ class BookingJpaEntity {
     }
 
     Booking toDomain() {
-        return new Booking(id, customerId, carId, startDate, endDate, status,
+        var snapshot = new CarSnapshot(
+                carId, carBrand, carModel, carLicensePlate,
+                new Money(dailyRateSnapshotAmount, dailyRateSnapshotCurrency)
+        );
+        return new Booking(id, customerId, snapshot, startDate, endDate, status,
                 new Money(totalSourceAmount, totalSourceCurrency),
                 new Money(totalTargetAmount, totalTargetCurrency),
                 createdAt, updatedAt);

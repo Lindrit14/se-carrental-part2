@@ -42,8 +42,4 @@ class BookingRepositoryAdapter implements BookingRepository {
                 .toList();
     }
 
-    @Override
-    public boolean existsForCar(String carId) {
-        return repo.existsByCarId(carId);
-    }
 }

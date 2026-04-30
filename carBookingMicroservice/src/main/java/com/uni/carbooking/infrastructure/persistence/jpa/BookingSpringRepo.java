@@ -7,5 +7,4 @@ import java.util.List;
 interface BookingSpringRepo extends JpaRepository<BookingJpaEntity, String> {
     List<BookingJpaEntity> findByCustomerIdOrderByCreatedAtDesc(String customerId);
     List<BookingJpaEntity> findAllByOrderByCreatedAtDesc();
-    boolean existsByCarId(String carId);
 }
