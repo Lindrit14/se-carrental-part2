@@ -116,7 +116,7 @@ func run() error {
 	deleteUserUC := admin.NewDeleteUserUseCase(userRepo, tokenRepo, publisher, clock, ids)
 
 	// --- Bootstrap admin ----------------------------------------------
-	if err := seedBootstrapAdmin(rootCtx, logger, cfg, userRepo, hasher, ids, clock); err != nil {
+	if err := seedBootstrapAdmin(rootCtx, logger, cfg, userRepo, hasher, publisher, ids, clock); err != nil {
 		return err
 	}
 
@@ -165,12 +165,17 @@ func run() error {
 
 // seedBootstrapAdmin creates an admin user from ADMIN_BOOTSTRAP_EMAIL/PASSWORD
 // if they are configured and no user with that email exists yet. Idempotent.
+//
+// Publishes user.registered through the outbox on first creation so downstream
+// services (booking) can build their customer read-model. Without this, the
+// admin can log in but every action that needs a customer projection fails.
 func seedBootstrapAdmin(
 	ctx context.Context,
 	logger *slog.Logger,
 	cfg *config.Config,
 	users domainuser.Repository,
 	hasher ports.PasswordHasher,
+	publisher ports.EventPublisher,
 	ids ports.IDGenerator,
 	clock ports.Clock,
 ) error {
@@ -184,15 +189,23 @@ func seedBootstrapAdmin(
 
 	existing, err := users.FindByEmail(ctx, email)
 	if err == nil && existing != nil {
-		// Make sure they actually have the admin role even if they pre-existed.
+		// Already exists. Ensure they have the admin role.
+		updated := false
 		if !existing.HasRole(domainuser.RoleAdmin) {
 			existing.Roles = append(existing.Roles, domainuser.RoleAdmin)
 			existing.UpdatedAt = clock.Now()
 			if err := users.Update(ctx, existing); err != nil {
 				return err
 			}
+			updated = true
 			logger.Info("bootstrap admin: granted admin role to pre-existing user", slog.String("email", email))
 		}
+		// Republish user.registered so booking's customer projection is healed
+		// even when the admin was created before the outbox was wired up.
+		// The booking-side EventLog inbox dedupes if the original event did
+		// land, so this is safe to run on every startup.
+		publishUserRegistered(ctx, publisher, ids, clock, existing.ID, existing.Email, logger)
+		_ = updated
 		return nil
 	} else if err != nil && !errors.Is(err, domainuser.ErrNotFound) {
 		return err
@@ -209,6 +222,29 @@ func seedBootstrapAdmin(
 	if err := users.Create(ctx, u); err != nil {
 		return err
 	}
+	publishUserRegistered(ctx, publisher, ids, clock, u.ID, u.Email, logger)
 	logger.Info("bootstrap admin: created", slog.String("email", email), slog.String("user_id", u.ID))
 	return nil
+}
+
+func publishUserRegistered(
+	ctx context.Context,
+	publisher ports.EventPublisher,
+	ids ports.IDGenerator,
+	clock ports.Clock,
+	userID, email string,
+	logger *slog.Logger,
+) {
+	err := publisher.Publish(ctx, ports.Event{
+		ID:         ids.New(),
+		Type:       auth.EventUserRegistered,
+		Version:    auth.EventVersion,
+		OccurredAt: clock.Now().UTC().Format(time.RFC3339),
+		RoutingKey: auth.EventUserRegistered,
+		Data:       auth.UserRegisteredData{UserID: userID, Email: email},
+	})
+	if err != nil {
+		logger.Error("bootstrap admin: failed to publish user.registered",
+			slog.String("user_id", userID), slog.Any("error", err))
+	}
 }
