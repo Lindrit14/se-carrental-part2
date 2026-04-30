@@ -11,7 +11,7 @@ const BASE_URLS: Record<Service, string> = {
 };
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   auth?: boolean; // include Authorization header (default: true)
   signal?: AbortSignal;

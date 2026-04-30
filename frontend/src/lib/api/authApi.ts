@@ -31,39 +31,27 @@ interface AdminUserDto {
   roles: string[];
   verified: boolean;
   created_at: string;
-  updated_at: string;
 }
 
-interface AdminUserListDto {
+interface AdminUsersResponseDto {
   items: AdminUserDto[];
   total: number;
-  limit: number;
-  offset: number;
 }
 
 export interface AdminUser {
   id: string;
   email: string;
-  roles: Role[];
+  roles: string[];
   verified: boolean;
   createdAt: string;
-  updatedAt: string;
-}
-
-export interface AdminUserListResult {
-  items: AdminUser[];
-  total: number;
-  limit: number;
-  offset: number;
 }
 
 const toAdminUser = (dto: AdminUserDto): AdminUser => ({
   id: dto.id,
   email: dto.email,
-  roles: dto.roles as Role[],
+  roles: dto.roles,
   verified: dto.verified,
   createdAt: dto.created_at,
-  updatedAt: dto.updated_at,
 });
 
 const toTokens = (dto: TokenResponseDto): AuthTokens => ({
@@ -151,37 +139,24 @@ export const authApi = {
     await request<void>('auth', '/api/v1/users/me', { method: 'DELETE' });
   },
 
-  /* ---------- Admin ---------- */
-
-  async adminListUsers(opts?: { limit?: number; offset?: number }): Promise<AdminUserListResult> {
+  async adminListUsers(opts?: { limit?: number; offset?: number }): Promise<{ items: AdminUser[]; total: number }> {
     const params = new URLSearchParams();
     if (opts?.limit != null) params.set('limit', String(opts.limit));
     if (opts?.offset != null) params.set('offset', String(opts.offset));
-    const qs = params.toString();
-    const path = qs ? `/api/v1/admin/users?${qs}` : '/api/v1/admin/users';
-    const dto = await request<AdminUserListDto>('auth', path);
-    return {
-      items: dto.items.map(toAdminUser),
-      total: dto.total,
-      limit: dto.limit,
-      offset: dto.offset,
-    };
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const dto = await request<AdminUsersResponseDto>('auth', `/api/v1/admin/users${qs}`);
+    return { items: dto.items.map(toAdminUser), total: dto.total };
   },
 
-  async adminGetUser(id: string): Promise<AdminUser> {
-    const dto = await request<AdminUserDto>('auth', `/api/v1/admin/users/${id}`);
-    return toAdminUser(dto);
-  },
-
-  async adminSetRoles(id: string, roles: Role[]): Promise<AdminUser> {
-    const dto = await request<AdminUserDto>('auth', `/api/v1/admin/users/${id}/roles`, {
-      method: 'PATCH',
+  async adminSetRoles(userId: string, roles: string[]): Promise<AdminUser> {
+    const dto = await request<AdminUserDto>('auth', `/api/v1/admin/users/${userId}/roles`, {
+      method: 'PUT',
       body: { roles },
     });
     return toAdminUser(dto);
   },
 
-  async adminDeleteUser(id: string): Promise<void> {
-    await request<void>('auth', `/api/v1/admin/users/${id}`, { method: 'DELETE' });
+  async adminDeleteUser(userId: string): Promise<void> {
+    await request<void>('auth', `/api/v1/admin/users/${userId}`, { method: 'DELETE' });
   },
 };

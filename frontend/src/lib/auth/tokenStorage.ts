@@ -4,7 +4,7 @@ const KEY = 'auth.tokens';
 
 /**
  * Typed wrapper around localStorage for our auth tokens. localStorage is
- * exposed to XSS — adequate for a uni project; production would use
+ * exposed to XSS; production would use
  * HttpOnly cookies + CSRF (see README).
  */
 export const tokenStorage = {

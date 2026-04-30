@@ -55,3 +55,25 @@ export function useCreateCar() {
     },
   });
 }
+
+export function useUpdateCar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: CreateCarInput }) =>
+      bookingApi.updateCar(id, input),
+    onSuccess: (_data, { id }) => {
+      void qc.invalidateQueries({ queryKey: carsKeys.list() });
+      void qc.invalidateQueries({ queryKey: carsKeys.detail(id) });
+    },
+  });
+}
+
+export function useDeleteCar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => bookingApi.deleteCar(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: carsKeys.list() });
+    },
+  });
+}

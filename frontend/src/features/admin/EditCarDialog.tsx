@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,8 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select';
-import { CAR_CATEGORIES, type CarCategory } from '@/domain/car';
-import { useCreateCar } from './useAdmin';
+import { CAR_CATEGORIES, type Car, type CarCategory } from '@/domain/car';
+import { useUpdateCar } from './useAdmin';
+
 
 
 const CATEGORY_LABEL: Record<CarCategory, string> = {
@@ -48,13 +49,14 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-interface CreateCarDialogProps {
+interface EditCarDialogProps {
+  car: Car | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateCarDialog({ open, onOpenChange }: CreateCarDialogProps) {
-  const create = useCreateCar();
+export function EditCarDialog({ car, open, onOpenChange }: EditCarDialogProps) {
+  const update = useUpdateCar();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -77,17 +79,33 @@ export function CreateCarDialog({ open, onOpenChange }: CreateCarDialogProps) {
     },
   });
 
+  // Hydrate form whenever the dialog opens with a different car.
+  useEffect(() => {
+    if (open && car) {
+      reset({
+        brand: car.brand,
+        model: car.model,
+        licensePlate: car.licensePlate,
+        dailyRateAmount: String(car.dailyRate.amount),
+        dailyRateCurrency: car.dailyRate.currency,
+        location: car.location,
+        category: car.category,
+      });
+      setServerError(null);
+    }
+  }, [open, car, reset]);
+
   const category = watch('category');
 
   const onSubmit = handleSubmit(async (values) => {
+    if (!car) return;
     setServerError(null);
     try {
-      await create.mutateAsync(values);
-      toast.success('Car added to fleet');
-      reset();
+      await update.mutateAsync({ id: car.id, input: values });
+      toast.success('Car updated');
       onOpenChange(false);
     } catch {
-      setServerError('Could not create the car.');
+      setServerError('Could not update the car.');
     }
   });
 
@@ -96,38 +114,33 @@ export function CreateCarDialog({ open, onOpenChange }: CreateCarDialogProps) {
       open={open}
       onOpenChange={(o) => {
         onOpenChange(o);
-        if (!o) {
-          reset();
-          setServerError(null);
-        }
+        if (!o) setServerError(null);
       }}
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a car</DialogTitle>
-          <DialogDescription>
-            New cars are immediately bookable by all users.
-          </DialogDescription>
+          <DialogTitle>Edit car</DialogTitle>
+          <DialogDescription>Changes apply immediately.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField>
-              <FormLabel htmlFor="brand">Brand</FormLabel>
-              <Input id="brand" aria-invalid={!!errors.brand} {...register('brand')} />
+              <FormLabel htmlFor="edit-brand">Brand</FormLabel>
+              <Input id="edit-brand" aria-invalid={!!errors.brand} {...register('brand')} />
               <FormError>{errors.brand?.message}</FormError>
             </FormField>
             <FormField>
-              <FormLabel htmlFor="model">Model</FormLabel>
-              <Input id="model" aria-invalid={!!errors.model} {...register('model')} />
+              <FormLabel htmlFor="edit-model">Model</FormLabel>
+              <Input id="edit-model" aria-invalid={!!errors.model} {...register('model')} />
               <FormError>{errors.model?.message}</FormError>
             </FormField>
           </div>
 
           <FormField>
-            <FormLabel htmlFor="licensePlate">License plate</FormLabel>
+            <FormLabel htmlFor="edit-licensePlate">License plate</FormLabel>
             <Input
-              id="licensePlate"
+              id="edit-licensePlate"
               aria-invalid={!!errors.licensePlate}
               {...register('licensePlate')}
             />
@@ -135,10 +148,9 @@ export function CreateCarDialog({ open, onOpenChange }: CreateCarDialogProps) {
           </FormField>
 
           <FormField>
-            <FormLabel htmlFor="location">Location</FormLabel>
+            <FormLabel htmlFor="edit-location">Location</FormLabel>
             <Input
-              id="location"
-              placeholder="Vienna International Airport, Vienna, Austria"
+              id="edit-location"
               aria-invalid={!!errors.location}
               {...register('location')}
             />
@@ -169,12 +181,11 @@ export function CreateCarDialog({ open, onOpenChange }: CreateCarDialogProps) {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormField>
-              <FormLabel htmlFor="dailyRateAmount">Daily rate</FormLabel>
+              <FormLabel htmlFor="edit-dailyRateAmount">Daily rate</FormLabel>
               <Input
-                id="dailyRateAmount"
+                id="edit-dailyRateAmount"
                 inputMode="decimal"
                 aria-invalid={!!errors.dailyRateAmount}
-                placeholder="79.00"
                 {...register('dailyRateAmount')}
               />
               <FormError>{errors.dailyRateAmount?.message}</FormError>
@@ -192,8 +203,8 @@ export function CreateCarDialog({ open, onOpenChange }: CreateCarDialogProps) {
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Saving…' : 'Add car'}
+            <Button type="submit" disabled={update.isPending}>
+              {update.isPending ? 'Saving…' : 'Save changes'}
             </Button>
           </DialogFooter>
         </form>

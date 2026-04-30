@@ -112,7 +112,7 @@ export const bookingApi = {
     if (input.to) params.set('to', input.to);
     const query = params.toString();
     const path = `/api/v1/cars/search${query ? `?${query}` : ''}`;
-    const dtos = await request<CarDto[]>('booking', path, { auth: false });
+    const dtos = await request<CarDto[]>('booking', path);
     return dtos.map(toCar);
   },
 
@@ -146,6 +146,18 @@ export const bookingApi = {
       body: input,
     });
     return toCar(dto);
+  },
+
+  async updateCar(id: string, input: CreateCarInput): Promise<Car> {
+    const dto = await request<CarDto>('booking', `/api/v1/cars/${id}`, {
+      method: 'PUT',
+      body: input,
+    });
+    return toCar(dto);
+  },
+
+  async deleteCar(id: string): Promise<void> {
+    await request<void>('booking', `/api/v1/cars/${id}`, { method: 'DELETE' });
   },
 
   async adminListBookings(): Promise<AdminBooking[]> {

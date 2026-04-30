@@ -118,7 +118,7 @@ export function AdminUserTable() {
                   <td className="px-4 py-3 font-medium text-zinc-900">{u.email}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {u.roles.map((r) => (
+                      {u.roles.map((r: string) => (
                         <Badge key={r} variant={r === 'admin' ? 'success' : 'neutral'}>
                           {r}
                         </Badge>

@@ -95,5 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [session, initialized, login, register, logout],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {initialized ? children : null}
+    </AuthContext.Provider>
+  );
 }
