@@ -34,6 +34,11 @@ class CarRepositoryAdapter implements CarRepository {
     }
 
     @Override
+    public void deleteById(String id) {
+        repo.deleteById(id);
+    }
+
+    @Override
     public List<Car> search(String location, CarCategory category, LocalDate from, LocalDate to) {
         return repo.search(location, category, from, to).stream()
                 .map(CarJpaEntity::toDomain)

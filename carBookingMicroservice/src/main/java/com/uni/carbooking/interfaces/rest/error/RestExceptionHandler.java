@@ -2,6 +2,7 @@ package com.uni.carbooking.interfaces.rest.error;
 
 import com.uni.carbooking.domain.error.BookingNotFound;
 import com.uni.carbooking.domain.error.BookingNotOwned;
+import com.uni.carbooking.domain.error.CarHasBookings;
 import com.uni.carbooking.domain.error.CarNotFound;
 import com.uni.carbooking.domain.error.CurrencyConversionFailed;
 import com.uni.carbooking.domain.error.CustomerNotFound;
@@ -30,6 +31,12 @@ class RestExceptionHandler {
     ResponseEntity<ErrorResponse> notOwned(BookingNotOwned e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse("forbidden", e.getMessage()));
+    }
+
+    @ExceptionHandler(CarHasBookings.class)
+    ResponseEntity<ErrorResponse> carHasBookings(CarHasBookings e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("car_has_bookings", e.getMessage()));
     }
 
     @ExceptionHandler(InvalidDateRange.class)

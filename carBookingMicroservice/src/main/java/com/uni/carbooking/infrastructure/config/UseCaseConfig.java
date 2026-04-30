@@ -5,9 +5,11 @@ import com.uni.carbooking.application.booking.CreateBookingUseCase;
 import com.uni.carbooking.application.booking.ListAllBookingsUseCase;
 import com.uni.carbooking.application.booking.ListMyBookingsUseCase;
 import com.uni.carbooking.application.car.AddCarUseCase;
+import com.uni.carbooking.application.car.DeleteCarUseCase;
 import com.uni.carbooking.application.car.GetCarUseCase;
 import com.uni.carbooking.application.car.ListCarsUseCase;
 import com.uni.carbooking.application.car.SearchCarsUseCase;
+import com.uni.carbooking.application.car.UpdateCarUseCase;
 import com.uni.carbooking.application.customer.AnonymizeCustomerUseCase;
 import com.uni.carbooking.application.customer.RegisterCustomerUseCase;
 import com.uni.carbooking.application.customer.UpdateCustomerEmailUseCase;
@@ -41,6 +43,14 @@ class UseCaseConfig {
 
     @Bean AddCarUseCase addCarUseCase(CarRepository cars, IdGenerator ids, Clock clock) {
         return new AddCarUseCase(cars, ids, clock);
+    }
+
+    @Bean UpdateCarUseCase updateCarUseCase(CarRepository cars) {
+        return new UpdateCarUseCase(cars);
+    }
+
+    @Bean DeleteCarUseCase deleteCarUseCase(CarRepository cars, BookingRepository bookings) {
+        return new DeleteCarUseCase(cars, bookings);
     }
 
     @Bean RegisterCustomerUseCase registerCustomerUseCase(CustomerRepository customers, IdGenerator ids, Clock clock) {

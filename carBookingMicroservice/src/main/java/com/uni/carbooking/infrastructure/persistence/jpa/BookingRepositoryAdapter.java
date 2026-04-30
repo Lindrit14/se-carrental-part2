@@ -41,4 +41,9 @@ class BookingRepositoryAdapter implements BookingRepository {
                 .map(BookingJpaEntity::toDomain)
                 .toList();
     }
+
+    @Override
+    public boolean existsForCar(String carId) {
+        return repo.existsByCarId(carId);
+    }
 }

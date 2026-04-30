@@ -12,10 +12,10 @@ public class Car {
     private final String id;
     private String brand;
     private String model;
-    private final String licensePlate;
+    private String licensePlate;
     private Money dailyRate;
-    private final String location;
-    private final CarCategory category;
+    private String location;
+    private CarCategory category;
     private final Instant createdAt;
 
     public Car(String id, String brand, String model, String licensePlate,
@@ -38,4 +38,14 @@ public class Car {
     public String location() { return location; }
     public CarCategory category() { return category; }
     public Instant createdAt() { return createdAt; }
+
+    public void update(String brand, String model, String licensePlate,
+                       Money dailyRate, String location, CarCategory category) {
+        this.brand = Objects.requireNonNull(brand);
+        this.model = Objects.requireNonNull(model);
+        this.licensePlate = Objects.requireNonNull(licensePlate);
+        this.dailyRate = Objects.requireNonNull(dailyRate);
+        this.location = Objects.requireNonNull(location);
+        this.category = Objects.requireNonNull(category);
+    }
 }

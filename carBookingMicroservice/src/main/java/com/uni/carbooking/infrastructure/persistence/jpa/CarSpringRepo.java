@@ -19,7 +19,7 @@ interface CarSpringRepo extends JpaRepository<CarJpaEntity, String> {
         SELECT c FROM CarJpaEntity c
         WHERE (:loc IS NULL OR LOWER(c.location) LIKE LOWER(CONCAT('%', :loc, '%')))
           AND (:cat IS NULL OR c.category = :cat)
-          AND (:from IS NULL OR :to IS NULL OR NOT EXISTS (
+          AND (CAST(:from AS date) IS NULL OR CAST(:to AS date) IS NULL OR NOT EXISTS (
               SELECT 1 FROM BookingJpaEntity b
                WHERE b.carId = c.id
                  AND b.status = com.uni.carbooking.domain.booking.BookingStatus.CONFIRMED

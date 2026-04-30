@@ -8,6 +8,7 @@ public interface CarRepository {
     void save(Car car);
     Optional<Car> findById(String id);
     List<Car> findAll();
+    void deleteById(String id);
 
     /**
      * Search cars matching all provided filters. {@code null} arguments are

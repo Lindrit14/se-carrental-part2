@@ -1,6 +1,8 @@
 # Secrets
 shared-secrets/jwt_private.pem
 shared-secrets/*.key
+.env
+.env.local
 
 # OS
 .DS_Store
