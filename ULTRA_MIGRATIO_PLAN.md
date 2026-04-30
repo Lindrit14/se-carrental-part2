@@ -190,7 +190,7 @@ The biggest structural change. Doing it before the gateway means the gateway onl
 
 ---
 
-## Phase 4 — Transactional Outbox + Event Persistence (3–4 days)
+## Phase 4 — Transactional Outbox + Event Persistence (3–4 days) ✅ DONE (2026-04-30)
 
 **Goal:** Fix the two highest-severity issues (#1 and #2).
 

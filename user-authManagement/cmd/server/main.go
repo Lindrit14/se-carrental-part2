@@ -20,6 +20,7 @@ import (
 	"github.com/lindritprekaj/user-authmanagement/internal/infrastructure/crypto"
 	"github.com/lindritprekaj/user-authmanagement/internal/infrastructure/logging"
 	"github.com/lindritprekaj/user-authmanagement/internal/infrastructure/mongodb"
+	"github.com/lindritprekaj/user-authmanagement/internal/infrastructure/outbox"
 	"github.com/lindritprekaj/user-authmanagement/internal/infrastructure/rabbitmq"
 	httpiface "github.com/lindritprekaj/user-authmanagement/internal/interfaces/http"
 	"github.com/lindritprekaj/user-authmanagement/internal/interfaces/http/handlers"
@@ -62,6 +63,10 @@ func run() error {
 	userRepo := mongodb.NewUserRepository(db)
 	tokenRepo := mongodb.NewRefreshTokenRepository(db)
 	resetRepo := mongodb.NewPasswordResetRepository(db)
+	outboxRepo := mongodb.NewOutboxRepository(db)
+	if err := mongodb.EnsureOutboxIndexes(rootCtx, db); err != nil {
+		return err
+	}
 
 	// --- RabbitMQ ------------------------------------------------------
 	rabbitConn, err := rabbitmq.Dial(rootCtx, cfg.RabbitMQ.URL, cfg.RabbitMQ.Exchange,
@@ -70,7 +75,12 @@ func run() error {
 		return err
 	}
 	defer rabbitConn.Close()
-	publisher := rabbitmq.NewPublisher(rabbitConn)
+
+	// Use cases see only the outbox publisher — they never touch RabbitMQ
+	// directly. The Relay below drains the outbox to RabbitMQ asynchronously.
+	publisher := outbox.NewPublisher(outboxRepo)
+	relay := outbox.NewRelay(outboxRepo, rabbitConn, logger, outbox.Config{})
+	go relay.Run(rootCtx)
 
 	// --- Crypto / Tokens ----------------------------------------------
 	hasher := crypto.NewBcryptHasher(cfg.Auth.BcryptCost)
