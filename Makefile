@@ -10,12 +10,12 @@ up: ## Build and start the full platform
 	@$(MAKE) keys
 	$(COMPOSE) up -d --build
 	@echo
-	@echo "  user-auth         : http://localhost:8080"
-	@echo "  car-service       : http://localhost:8082"
-	@echo "  booking           : http://localhost:8083"
-	@echo "  notification      : http://localhost:8084"
-	@echo "  currency-converter: http://localhost:8000"
+	@echo "  api-gateway       : http://localhost:8080  (single entry point)"
+	@echo "  frontend          : http://localhost:3000"
 	@echo "  RabbitMQ UI       : http://localhost:15672 (guest/guest)"
+	@echo
+	@echo "  Backends are internal-only (reachable via the gateway):"
+	@echo "    user-auth, car-service, booking, currency-converter, notification"
 
 down: ## Stop the platform
 	$(COMPOSE) down

@@ -4,10 +4,14 @@ import { ApiError, type ApiErrorBody } from './errors';
 
 export type Service = 'auth' | 'booking' | 'currency';
 
+// Single gateway URL — all routing handled server-side by the API gateway.
+// Service param kept for caller readability; resolves to the same base URL.
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
+
 const BASE_URLS: Record<Service, string> = {
-  auth: import.meta.env.VITE_AUTH_URL ?? 'http://localhost:8080',
-  booking: import.meta.env.VITE_BOOKING_URL ?? 'http://localhost:8082',
-  currency: import.meta.env.VITE_CURRENCY_URL ?? 'http://localhost:8000',
+  auth: API_URL,
+  booking: API_URL,
+  currency: API_URL,
 };
 
 interface RequestOptions {
