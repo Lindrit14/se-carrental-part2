@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { bookingApi } from '@/lib/api/bookingApi';
+import { carsApi } from '@/lib/api/carsApi';
 
 export const carsKeys = {
   all: ['cars'] as const,
@@ -10,14 +10,14 @@ export const carsKeys = {
 export function useCars() {
   return useQuery({
     queryKey: carsKeys.list(),
-    queryFn: () => bookingApi.listCars(),
+    queryFn: () => carsApi.listCars(),
   });
 }
 
 export function useCar(id: string) {
   return useQuery({
     queryKey: carsKeys.detail(id),
-    queryFn: () => bookingApi.getCar(id),
+    queryFn: () => carsApi.getCar(id),
     enabled: Boolean(id),
   });
 }

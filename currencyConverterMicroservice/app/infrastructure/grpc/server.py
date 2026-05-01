@@ -1,14 +1,3 @@
-"""gRPC server: implements ``currency.v1.CurrencyConverter`` over the existing
-``ConvertUseCase``. Replaces the previous AMQP RPC server.
-
-Domain errors are mapped to gRPC status codes so callers can react with the
-standard tooling rather than parsing a JSON envelope:
-
-  UnknownCurrency      -> INVALID_ARGUMENT
-  RatesUnavailable     -> FAILED_PRECONDITION
-  ValueError/TypeError -> INVALID_ARGUMENT (malformed request)
-  unexpected           -> INTERNAL
-"""
 from __future__ import annotations
 
 import logging
@@ -71,10 +60,6 @@ class CurrencyConverterServicer(currency_pb2_grpc.CurrencyConverterServicer):
 
 
 class CurrencyGrpcServer:
-    """Lifecycle wrapper for ``grpc.aio.server`` — start/stop hooks match the
-    shape of the previous ``CurrencyRpcServer`` so ``main.py``'s lifespan stays
-    structurally identical.
-    """
 
     def __init__(self, port: int, usecase: ConvertUseCase) -> None:
         self._port = port

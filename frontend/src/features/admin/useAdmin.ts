@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi, type AdminUser } from '@/lib/api/authApi';
-import { bookingApi, type CreateCarInput } from '@/lib/api/bookingApi';
+import { bookingsApi } from '@/lib/api/bookingsApi';
+import { carsApi, type CreateCarInput } from '@/lib/api/carsApi';
 import type { Role } from '@/domain/user';
 import { carsKeys } from '@/features/cars/useCars';
 
@@ -42,14 +43,14 @@ export function useAdminDeleteUser() {
 export function useAdminBookings() {
   return useQuery({
     queryKey: adminKeys.bookings(),
-    queryFn: () => bookingApi.adminListBookings(),
+    queryFn: () => bookingsApi.adminListBookings(),
   });
 }
 
 export function useCreateCar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateCarInput) => bookingApi.createCar(input),
+    mutationFn: (input: CreateCarInput) => carsApi.createCar(input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: carsKeys.list() });
     },
@@ -60,7 +61,7 @@ export function useUpdateCar() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: CreateCarInput }) =>
-      bookingApi.updateCar(id, input),
+      carsApi.updateCar(id, input),
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: carsKeys.list() });
       void qc.invalidateQueries({ queryKey: carsKeys.detail(id) });
@@ -71,7 +72,7 @@ export function useUpdateCar() {
 export function useDeleteCar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => bookingApi.deleteCar(id),
+    mutationFn: (id: string) => carsApi.deleteCar(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: carsKeys.list() });
     },
