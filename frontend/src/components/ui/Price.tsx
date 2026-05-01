@@ -1,41 +1,36 @@
 import { cn } from '@/lib/utils/cn';
 import type { Money } from '@/domain/money';
-import { convertMoney, formatMoney } from '@/lib/format/money';
-import { useDisplayCurrency } from '@/features/currency/useDisplayCurrency';
+import { formatMoney } from '@/lib/format/money';
 
 interface PriceProps {
-  /** The price as quoted in its source currency (e.g. car.dailyRate). */
-  source: Money;
-  /** Optional suffix rendered inline (e.g. ``/ day``, ``/ 3 days``). */
+  /** The price to render. The backend has already converted into the
+   *  requested target currency (or returned the source). */
+  amount: Money;
+  /** Optional source-currency value to render below as a muted hint —
+   *  pass when `amount` is the converted price and you also want to
+   *  show the original quote. */
+  original?: Money;
+  /** Optional suffix rendered inline (e.g. "/ day", "/ 3 days"). */
   suffix?: string;
   className?: string;
-  /** Override the display currency (rarely needed — defaults to navbar choice). */
-  displayCurrency?: string;
-  /** When true, hide the muted source-currency hint. */
-  hideOriginal?: boolean;
 }
 
 /**
- * Render a Money in the user's currently selected display currency. Falls
- * back to the source currency if rates aren't loaded yet — the price still
- * renders, just unconverted, so the page never has empty cells.
+ * Dumb money formatter. Frontend no longer does FX conversion — the backend
+ * returns prices already converted into the user's target currency. This
+ * component just renders.
  */
-export function Price({
-  source,
-  suffix,
-  className,
-  displayCurrency,
-}: PriceProps) {
-  const { displayCurrency: ctxCurrency, rates } = useDisplayCurrency();
-  const target = displayCurrency ?? ctxCurrency;
-  const converted = convertMoney(source, target, rates);
-
+export function Price({ amount, original, suffix, className }: PriceProps) {
+  const showOriginal = original && original.currency !== amount.currency;
   return (
     <span className={cn('inline-flex flex-col', className)}>
       <span className="inline-flex items-baseline gap-1.5">
-        <span className="font-semibold text-zinc-900">{formatMoney(converted)}</span>
+        <span className="font-semibold text-zinc-900">{formatMoney(amount)}</span>
         {suffix && <span className="text-xs text-zinc-500">{suffix}</span>}
       </span>
+      {showOriginal && (
+        <span className="text-xs text-zinc-400">{formatMoney(original)}</span>
+      )}
     </span>
   );
 }

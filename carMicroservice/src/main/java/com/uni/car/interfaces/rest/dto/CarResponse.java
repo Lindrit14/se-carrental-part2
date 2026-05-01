@@ -12,6 +12,8 @@ public record CarResponse(
         String licensePlate,
         BigDecimal dailyRateAmount,
         String dailyRateCurrency,
+        BigDecimal dailyRateConvertedAmount,
+        String dailyRateConvertedCurrency,
         String location,
         CarCategory category
 ) {
@@ -19,6 +21,18 @@ public record CarResponse(
         return new CarResponse(
                 c.id(), c.brand(), c.model(), c.licensePlate(),
                 c.dailyRate().amount(), c.dailyRate().currency(),
+                null, null,
+                c.location(), c.category()
+        );
+    }
+
+    public static CarResponse fromWithConversion(Car c,
+                                                 BigDecimal convertedAmount,
+                                                 String convertedCurrency) {
+        return new CarResponse(
+                c.id(), c.brand(), c.model(), c.licensePlate(),
+                c.dailyRate().amount(), c.dailyRate().currency(),
+                convertedAmount, convertedAmount == null ? null : convertedCurrency,
                 c.location(), c.category()
         );
     }

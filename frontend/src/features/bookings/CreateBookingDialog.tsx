@@ -15,9 +15,9 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { FormError, FormField, FormHelp, FormLabel } from '@/components/ui/Form';
-import { Price } from '@/components/ui/Price';
 import type { Car } from '@/domain/car';
 import { useDisplayCurrency } from '@/features/currency/useDisplayCurrency';
+import { formatMoney } from '@/lib/format/money';
 import { useCreateBooking } from './useBookings';
 import { ApiError } from '@/lib/api/errors';
 
@@ -152,19 +152,18 @@ export function CreateBookingDialog({
               <span className="text-sm text-zinc-600">
                 Estimated total ({days} day{days === 1 ? '' : 's'})
               </span>
-              <Price
-                source={{
+              <span className="font-semibold text-zinc-900">
+                {formatMoney({
                   amount: (Number(car.dailyRate.amount) * days).toFixed(2),
                   currency: car.dailyRate.currency,
-                }}
-                hideOriginal
-              />
+                })}
+              </span>
             </div>
           )}
 
           <FormHelp>
-            The booking total will be locked in at the current ECB reference rate by the
-            currency-converter service.
+            The total will be locked in at the current ECB reference rate when the booking is
+            confirmed and shown in {displayCurrency} on your bookings page.
           </FormHelp>
 
           {serverError && (

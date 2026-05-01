@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -27,11 +28,14 @@ class BookingController {
     private final CreateBookingUseCase create;
     private final ListMyBookingsUseCase listMine;
     private final CancelBookingUseCase cancel;
+    private final BookingPriceProjection priceProjection;
 
-    BookingController(CreateBookingUseCase create, ListMyBookingsUseCase listMine, CancelBookingUseCase cancel) {
+    BookingController(CreateBookingUseCase create, ListMyBookingsUseCase listMine,
+                      CancelBookingUseCase cancel, BookingPriceProjection priceProjection) {
         this.create = create;
         this.listMine = listMine;
         this.cancel = cancel;
+        this.priceProjection = priceProjection;
     }
 
     @PostMapping
@@ -48,8 +52,12 @@ class BookingController {
     }
 
     @GetMapping("/me")
-    List<BookingResponse> mine(@AuthenticationPrincipal Jwt jwt) {
-        return listMine.execute(jwt.getSubject()).stream().map(BookingResponse::from).toList();
+    List<BookingResponse> mine(@AuthenticationPrincipal Jwt jwt,
+                               @RequestParam(required = false) String targetCurrency) {
+        var displayTotal = priceProjection.displayTotalFor(targetCurrency);
+        return listMine.execute(jwt.getSubject()).stream()
+                .map(b -> BookingResponse.fromWithDisplayTotal(b, displayTotal.totalFor(b)))
+                .toList();
     }
 
     @DeleteMapping("/{id}")

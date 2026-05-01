@@ -4,11 +4,10 @@ version = "0.1.0"
 description = "Currency conversion microservice (FastAPI + gRPC, ECB rate feed)"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
     "grpcio>=1.66.0",
+    "grpcio-health-checking>=1.66.0",
     "grpcio-status>=1.66.0",
     "googleapis-common-protos>=1.65.0",
     "protobuf>=5.28.0",

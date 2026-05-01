@@ -23,6 +23,10 @@ export interface Car {
   model: string;
   licensePlate: string;
   dailyRate: Money;
+  /** Server-side conversion of dailyRate into the request's targetCurrency.
+   *  Absent when no targetCurrency was sent, when source equals target, or
+   *  when the currency-converter service was unavailable for the request. */
+  dailyRateConverted?: Money;
   location: string;
   category: CarCategory;
 }

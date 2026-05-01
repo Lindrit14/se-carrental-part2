@@ -1,10 +1,7 @@
-package com.uni.carbooking.infrastructure.grpc;
+package com.uni.car.infrastructure.grpc;
 
-import com.uni.carbooking.application.port.out.CurrencyConverterPort;
-import com.uni.carbooking.domain.error.CurrencyConversionFailed;
-import com.uni.carbooking.domain.money.Money;
-import com.uni.currency.grpc.v1.ConvertRequest;
-import com.uni.currency.grpc.v1.ConvertResponse;
+import com.uni.car.application.port.out.CurrencyConverterPort;
+import com.uni.car.domain.error.CurrencyServiceUnavailable;
 import com.uni.currency.grpc.v1.CurrencyConverterGrpc;
 import com.uni.currency.grpc.v1.GetRatesRequest;
 import com.uni.currency.grpc.v1.GetRatesResponse;
@@ -19,16 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-/**
- * gRPC client for the currency-converter service. Replaces the previous
- * RabbitMQ-RPC adapter; the port boundary ({@link CurrencyConverterPort}) is
- * unchanged so {@code CreateBookingUseCase} doesn't move.
- *
- * <p>Any non-{@code OK} status — INVALID_ARGUMENT, FAILED_PRECONDITION,
- * UNAVAILABLE, DEADLINE_EXCEEDED, etc. — is surfaced as
- * {@link CurrencyConversionFailed}, the same exception the old adapter raised,
- * so upstream error mapping is unaffected.
- */
 @Component
 class GrpcCurrencyConverterClient implements CurrencyConverterPort {
 
@@ -43,26 +30,6 @@ class GrpcCurrencyConverterClient implements CurrencyConverterPort {
     }
 
     @Override
-    public Money convert(Money source, String targetCurrency) {
-        var request = ConvertRequest.newBuilder()
-                .setAmount(source.amount().toPlainString())
-                .setFromCurrency(source.currency())
-                .setToCurrency(targetCurrency)
-                .build();
-
-        ConvertResponse reply;
-        try {
-            reply = stub
-                    .withDeadlineAfter(deadlineMs, TimeUnit.MILLISECONDS)
-                    .convert(request);
-        } catch (StatusRuntimeException e) {
-            throw new CurrencyConversionFailed(messageFor(e.getStatus()));
-        }
-
-        return new Money(new BigDecimal(reply.getAmount()), reply.getCurrency());
-    }
-
-    @Override
     public RateSet getRates() {
         GetRatesResponse reply;
         try {
@@ -70,7 +37,7 @@ class GrpcCurrencyConverterClient implements CurrencyConverterPort {
                     .withDeadlineAfter(deadlineMs, TimeUnit.MILLISECONDS)
                     .getRates(GetRatesRequest.getDefaultInstance());
         } catch (StatusRuntimeException e) {
-            throw new CurrencyConversionFailed(messageFor(e.getStatus()));
+            throw new CurrencyServiceUnavailable(messageFor(e.getStatus()));
         }
 
         Map<String, BigDecimal> rates = new LinkedHashMap<>(reply.getRatesCount() + 1);
@@ -86,6 +53,8 @@ class GrpcCurrencyConverterClient implements CurrencyConverterPort {
         return switch (code) {
             case DEADLINE_EXCEEDED -> "currency-converter timed out";
             case UNAVAILABLE -> "currency-converter unavailable: "
+                    + (description == null ? code.name() : description);
+            case FAILED_PRECONDITION -> "currency-converter not ready: "
                     + (description == null ? code.name() : description);
             default -> "currency-converter error: " + code.name()
                     + (description == null ? "" : ": " + description);

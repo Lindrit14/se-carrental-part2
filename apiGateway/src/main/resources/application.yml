@@ -44,11 +44,6 @@ spring:
           predicates:
             - Path=/api/v1/bookings,/api/v1/bookings/**,/api/v1/admin/bookings,/api/v1/admin/bookings/**
 
-        - id: currency-http
-          uri: ${CURRENCY_SERVICE_URL:http://localhost:8000}
-          predicates:
-            - Path=/api/v1/rates,/api/v1/rates/**,/api/v1/convert,/api/v1/convert/**
-
   security:
     oauth2:
       resourceserver:

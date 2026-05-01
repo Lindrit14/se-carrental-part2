@@ -68,8 +68,11 @@ export const bookingsApi = {
     return toBooking(dto);
   },
 
-  async listMyBookings(): Promise<Booking[]> {
-    const dtos = await request<BookingDto[]>('bookings', '/api/v1/bookings/me');
+  async listMyBookings(targetCurrency?: string): Promise<Booking[]> {
+    const path = targetCurrency
+      ? `/api/v1/bookings/me?targetCurrency=${encodeURIComponent(targetCurrency)}`
+      : '/api/v1/bookings/me';
+    const dtos = await request<BookingDto[]>('bookings', path);
     return dtos.map(toBooking);
   },
 
@@ -79,8 +82,11 @@ export const bookingsApi = {
 
   /* ---------- Admin ---------- */
 
-  async adminListBookings(): Promise<AdminBooking[]> {
-    const dtos = await request<AdminBookingDto[]>('bookings', '/api/v1/admin/bookings');
+  async adminListBookings(targetCurrency?: string): Promise<AdminBooking[]> {
+    const path = targetCurrency
+      ? `/api/v1/admin/bookings?targetCurrency=${encodeURIComponent(targetCurrency)}`
+      : '/api/v1/admin/bookings';
+    const dtos = await request<AdminBookingDto[]>('bookings', path);
     return dtos.map(toAdminBooking);
   },
 };

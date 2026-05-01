@@ -39,7 +39,6 @@ services:
       USER_AUTH_URL: http://user-auth:8081
       CAR_SERVICE_URL: http://car-service:8082
       BOOKING_SERVICE_URL: http://booking:8080
-      CURRENCY_SERVICE_URL: http://currency-converter:8000
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
@@ -134,12 +133,16 @@ services:
       SPRING_DATASOURCE_USERNAME: car
       SPRING_DATASOURCE_PASSWORD: car
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public.pem
+      CURRENCY_CONVERTER_GRPC_ADDRESS: currency-converter:9000
+      CURRENCY_CONVERTER_GRPC_DEADLINE_MS: "5000"
     volumes:
       - ./shared-secrets:/run/secrets:ro
     expose:
       - "8082"
     depends_on:
       cars-db:
+        condition: service_healthy
+      currency-converter:
         condition: service_healthy
     restart: unless-stopped
     networks: [platform]
@@ -200,14 +203,12 @@ services:
     environment:
       ECB_FEED_URL: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
       ECB_REFRESH_INTERVAL: "3600"
-      HTTP_PORT: "8000"
       GRPC_PORT: "9000"
       LOG_LEVEL: info
     expose:
-      - "8000"
       - "9000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      test: ["CMD", "grpc_health_probe", "-addr=:9000"]
       interval: 10s
       timeout: 5s
       retries: 10

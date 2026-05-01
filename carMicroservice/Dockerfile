@@ -6,6 +6,7 @@ COPY pom.xml ./
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -q dependency:go-offline || true
 
+COPY proto ./proto
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -q -DskipTests package && \

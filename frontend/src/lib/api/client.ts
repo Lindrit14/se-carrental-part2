@@ -2,7 +2,7 @@ import type { AuthTokens } from '@/domain/auth';
 import { tokenStorage } from '@/lib/auth/tokenStorage';
 import { ApiError, type ApiErrorBody } from './errors';
 
-export type Service = 'auth' | 'cars' | 'bookings' | 'currency';
+export type Service = 'auth' | 'cars' | 'bookings';
 
 // Single gateway URL — all routing handled server-side by the API gateway.
 // Service param kept for caller readability; resolves to the same base URL.
@@ -12,7 +12,6 @@ const BASE_URLS: Record<Service, string> = {
   auth: API_URL,
   cars: API_URL,
   bookings: API_URL,
-  currency: API_URL,
 };
 
 interface RequestOptions {

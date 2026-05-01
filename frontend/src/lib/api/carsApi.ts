@@ -10,6 +10,8 @@ interface CarDto {
   licensePlate: string;
   dailyRateAmount: string | number;
   dailyRateCurrency: string;
+  dailyRateConvertedAmount?: string | number | null;
+  dailyRateConvertedCurrency?: string | null;
   location: string;
   category: CarCategory;
 }
@@ -20,6 +22,13 @@ const toCar = (dto: CarDto): Car => ({
   model: dto.model,
   licensePlate: dto.licensePlate,
   dailyRate: { amount: String(dto.dailyRateAmount), currency: dto.dailyRateCurrency },
+  dailyRateConverted:
+    dto.dailyRateConvertedAmount != null && dto.dailyRateConvertedCurrency
+      ? {
+          amount: String(dto.dailyRateConvertedAmount),
+          currency: dto.dailyRateConvertedCurrency,
+        }
+      : undefined,
   location: dto.location,
   category: dto.category,
 });
@@ -41,11 +50,21 @@ export interface SearchCarsInput {
   category?: CarCategory;
   from?: string;
   to?: string;
+  /** ISO-4217 code; backend returns dailyRateConverted in this currency. */
+  targetCurrency?: string;
+}
+
+function appendTarget(params: URLSearchParams, targetCurrency?: string): void {
+  if (targetCurrency) params.set('targetCurrency', targetCurrency);
 }
 
 export const carsApi = {
-  async listCars(): Promise<Car[]> {
-    const dtos = await request<CarDto[]>('cars', '/api/v1/cars', { auth: false });
+  async listCars(targetCurrency?: string): Promise<Car[]> {
+    const params = new URLSearchParams();
+    appendTarget(params, targetCurrency);
+    const query = params.toString();
+    const path = `/api/v1/cars${query ? `?${query}` : ''}`;
+    const dtos = await request<CarDto[]>('cars', path, { auth: false });
     return dtos.map(toCar);
   },
 
@@ -55,14 +74,19 @@ export const carsApi = {
     if (input.category) params.set('category', input.category);
     if (input.from) params.set('from', input.from);
     if (input.to) params.set('to', input.to);
+    appendTarget(params, input.targetCurrency);
     const query = params.toString();
     const path = `/api/v1/cars/search${query ? `?${query}` : ''}`;
     const dtos = await request<CarDto[]>('cars', path);
     return dtos.map(toCar);
   },
 
-  async getCar(id: string): Promise<Car> {
-    const dto = await request<CarDto>('cars', `/api/v1/cars/${id}`, { auth: false });
+  async getCar(id: string, targetCurrency?: string): Promise<Car> {
+    const params = new URLSearchParams();
+    appendTarget(params, targetCurrency);
+    const query = params.toString();
+    const path = `/api/v1/cars/${id}${query ? `?${query}` : ''}`;
+    const dto = await request<CarDto>('cars', path, { auth: false });
     return toCar(dto);
   },
 

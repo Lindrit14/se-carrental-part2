@@ -4,11 +4,13 @@ import { bookingsApi } from '@/lib/api/bookingsApi';
 import { carsApi, type CreateCarInput } from '@/lib/api/carsApi';
 import type { Role } from '@/domain/user';
 import { carsKeys } from '@/features/cars/useCars';
+import { useDisplayCurrency } from '@/features/currency/useDisplayCurrency';
 
 export const adminKeys = {
   all: ['admin'] as const,
   users: () => [...adminKeys.all, 'users'] as const,
-  bookings: () => [...adminKeys.all, 'bookings'] as const,
+  bookings: (targetCurrency: string) =>
+    [...adminKeys.all, 'bookings', targetCurrency] as const,
 };
 
 export function useAdminUsers(opts?: { limit?: number; offset?: number }) {
@@ -41,9 +43,10 @@ export function useAdminDeleteUser() {
 }
 
 export function useAdminBookings() {
+  const { displayCurrency } = useDisplayCurrency();
   return useQuery({
-    queryKey: adminKeys.bookings(),
-    queryFn: () => bookingsApi.adminListBookings(),
+    queryKey: adminKeys.bookings(displayCurrency),
+    queryFn: () => bookingsApi.adminListBookings(displayCurrency),
   });
 }
 
@@ -52,7 +55,7 @@ export function useCreateCar() {
   return useMutation({
     mutationFn: (input: CreateCarInput) => carsApi.createCar(input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: carsKeys.list() });
+      void qc.invalidateQueries({ queryKey: carsKeys.all });
     },
   });
 }
@@ -63,8 +66,8 @@ export function useUpdateCar() {
     mutationFn: ({ id, input }: { id: string; input: CreateCarInput }) =>
       carsApi.updateCar(id, input),
     onSuccess: (_data, { id }) => {
-      void qc.invalidateQueries({ queryKey: carsKeys.list() });
-      void qc.invalidateQueries({ queryKey: carsKeys.detail(id) });
+      void qc.invalidateQueries({ queryKey: carsKeys.all });
+      void qc.invalidateQueries({ queryKey: [...carsKeys.all, 'detail', id] });
     },
   });
 }
@@ -74,7 +77,7 @@ export function useDeleteCar() {
   return useMutation({
     mutationFn: (id: string) => carsApi.deleteCar(id),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: carsKeys.list() });
+      void qc.invalidateQueries({ queryKey: carsKeys.all });
     },
   });
 }

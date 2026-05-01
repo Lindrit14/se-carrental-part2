@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
 import { Price } from '@/components/ui/Price';
 import { CreateBookingDialog } from '@/features/bookings/CreateBookingDialog';
+import { useDisplayCurrency } from '@/features/currency/useDisplayCurrency';
 import type { CarCategory } from '@/domain/car';
 
 const CATEGORY_LABEL: Record<CarCategory, string> = {
@@ -27,9 +28,10 @@ export function BookCarPage() {
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
 
+  const { displayCurrency } = useDisplayCurrency();
   const { data: car, isLoading, isError } = useQuery({
-    queryKey: ['car', carId],
-    queryFn: () => carsApi.getCar(carId),
+    queryKey: ['car', carId, displayCurrency],
+    queryFn: () => carsApi.getCar(carId, displayCurrency),
     enabled: !!carId,
   });
 
@@ -72,7 +74,11 @@ export function BookCarPage() {
           <Badge variant="muted">{CATEGORY_LABEL[car.category]}</Badge>
         </div>
         <div className="mt-4">
-          <Price source={car.dailyRate} suffix="/ day" />
+          <Price
+            amount={car.dailyRateConverted ?? car.dailyRate}
+            original={car.dailyRateConverted ? car.dailyRate : undefined}
+            suffix="/ day"
+          />
         </div>
       </div>
 

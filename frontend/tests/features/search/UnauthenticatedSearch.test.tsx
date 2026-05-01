@@ -52,11 +52,6 @@ function renderUnauthenticatedHomeWithCarsRoute(initialPath: string = '/') {
           value={{
             displayCurrency: 'EUR',
             setDisplayCurrency: vi.fn(),
-            rates: new Map([['EUR', 1]]),
-            available: ['EUR'],
-            ratesLoading: false,
-            ratesError: false,
-            rateDate: null,
           }}
         >
           <MemoryRouter initialEntries={[initialPath]}>
@@ -124,8 +119,11 @@ describe('Unauthenticated car search', () => {
 
     const [url, init] = searchCall!;
     const requestUrl = String(url);
-    // No filters → carsApi builds the path with no query string.
-    expect(requestUrl).toBe('http://localhost:8080/api/v1/cars/search');
+    // No location/category/date filters → only targetCurrency on the query
+    // string (the navbar context defaults to EUR and is sent on every call).
+    expect(requestUrl).toBe(
+      'http://localhost:8080/api/v1/cars/search?targetCurrency=EUR',
+    );
     expect(init?.method ?? 'GET').toBe('GET');
     expect((init?.headers as Record<string, string>).Authorization).toBeUndefined();
   });

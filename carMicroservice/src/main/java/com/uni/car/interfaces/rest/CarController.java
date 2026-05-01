@@ -37,33 +37,40 @@ class CarController {
     private final AddCarUseCase add;
     private final UpdateCarUseCase update;
     private final DeleteCarUseCase delete;
+    private final CarPriceProjection priceProjection;
 
     CarController(ListCarsUseCase list, SearchCarsUseCase search, GetCarUseCase get,
-                  AddCarUseCase add, UpdateCarUseCase update, DeleteCarUseCase delete) {
+                  AddCarUseCase add, UpdateCarUseCase update, DeleteCarUseCase delete,
+                  CarPriceProjection priceProjection) {
         this.list = list;
         this.search = search;
         this.get = get;
         this.add = add;
         this.update = update;
         this.delete = delete;
+        this.priceProjection = priceProjection;
     }
 
     @GetMapping
-    List<CarResponse> list() {
-        return list.execute().stream().map(CarResponse::from).toList();
+    List<CarResponse> list(@RequestParam(required = false) String targetCurrency) {
+        var renderer = priceProjection.rendererFor(targetCurrency);
+        return list.execute().stream().map(renderer::render).toList();
     }
 
     @GetMapping("/search")
     List<CarResponse> search(
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) CarCategory category) {
+            @RequestParam(required = false) CarCategory category,
+            @RequestParam(required = false) String targetCurrency) {
+        var renderer = priceProjection.rendererFor(targetCurrency);
         return search.execute(new SearchCarsUseCase.Input(location, category))
-                .stream().map(CarResponse::from).toList();
+                .stream().map(renderer::render).toList();
     }
 
     @GetMapping("/{id}")
-    CarResponse one(@PathVariable String id) {
-        return CarResponse.from(get.execute(id));
+    CarResponse one(@PathVariable String id,
+                    @RequestParam(required = false) String targetCurrency) {
+        return priceProjection.rendererFor(targetCurrency).render(get.execute(id));
     }
 
     @PostMapping

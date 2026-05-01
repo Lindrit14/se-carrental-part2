@@ -42,7 +42,11 @@ export function CarCard({ car, action, showLicensePlate }: CarCardProps) {
           <Badge variant="muted">{CATEGORY_LABEL[car.category]}</Badge>
         </div>
         <div className="mt-auto">
-          <Price source={car.dailyRate} suffix="/ day" />
+          <Price
+            amount={car.dailyRateConverted ?? car.dailyRate}
+            original={car.dailyRateConverted ? car.dailyRate : undefined}
+            suffix="/ day"
+          />
         </div>
       </CardContent>
       {action && <CardFooter className="border-t border-zinc-100 px-6 py-4">{action}</CardFooter>}

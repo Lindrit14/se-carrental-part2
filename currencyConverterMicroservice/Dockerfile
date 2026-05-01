@@ -29,6 +29,15 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# grpc_health_probe — used by docker / k8s liveness+readiness probes.
+ARG GRPC_HEALTH_PROBE_VERSION=v0.4.25
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates wget \
+ && wget -qO /usr/local/bin/grpc_health_probe \
+    https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-$(dpkg --print-architecture) \
+ && chmod +x /usr/local/bin/grpc_health_probe \
+ && apt-get purge -y wget && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 # Non-root user
 RUN useradd --create-home --uid 1000 app
 WORKDIR /app
@@ -39,6 +48,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder --chown=app:app /build/app /app/app
 
 USER app
-EXPOSE 8000 9000
+EXPOSE 9000
 
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=30s \
+  CMD ["grpc_health_probe", "-addr=:9000"]
+
+CMD ["python", "-m", "app.main"]

@@ -43,6 +43,12 @@ management:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
+grpc:
+  client:
+    currency-converter:
+      address: ${CURRENCY_CONVERTER_GRPC_ADDRESS:localhost:9000}
+      deadline-ms: ${CURRENCY_CONVERTER_GRPC_DEADLINE_MS:5000}
+
 logging:
   level:
     root: INFO

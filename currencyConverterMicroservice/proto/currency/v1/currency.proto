@@ -15,6 +15,7 @@ option java_outer_classname = "CurrencyProto";
 //   INTERNAL             -> unexpected server error
 service CurrencyConverter {
   rpc Convert(ConvertRequest) returns (ConvertResponse);
+  rpc GetRates(GetRatesRequest) returns (GetRatesResponse);
 }
 
 message ConvertRequest {
@@ -38,4 +39,23 @@ message ConvertResponse {
   string source_currency = 4;
   // ISO date (YYYY-MM-DD) of the rate set used for the conversion.
   string rate_date = 5;
+}
+
+message GetRatesRequest {}
+
+message Rate {
+  // ISO-4217 currency code, 3 uppercase chars.
+  string currency = 1;
+  // Units of `currency` per 1 unit of `base`, decimal string.
+  string rate = 2;
+}
+
+message GetRatesResponse {
+  // Always "EUR" (ECB reference rates are EUR-based).
+  string base = 1;
+  // ISO date (YYYY-MM-DD) the rate set was published.
+  string rate_date = 2;
+  // Quoted currencies. Does not include the base; clients should treat
+  // base as rate=1.0 themselves.
+  repeated Rate rates = 3;
 }
