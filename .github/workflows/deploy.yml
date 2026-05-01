@@ -22,18 +22,19 @@ env:
 
 jobs:
   # ------------------------------------------------------------------
-  # 1. Detect-Changes: nur die Services bauen deren Code sich änderte.
+  # 1. detect-changes: ermittelt welche Services neu gebaut werden
+  #    müssen und emittiert die Matrix als JSON-Array.
+  #
+  #    Wir bauen die Matrix HIER dynamisch (statt im build-Job mit
+  #    statischer matrix.include + if:), weil GHA keinen Zugriff auf
+  #    matrix.* im job-level if: erlaubt. Der dynamische Ansatz spart
+  #    außerdem Runner-Zeit (keine leeren Skip-Jobs).
   # ------------------------------------------------------------------
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      api-gateway: ${{ steps.filter.outputs.api-gateway }}
-      user-auth: ${{ steps.filter.outputs.user-auth }}
-      car-service: ${{ steps.filter.outputs.car-service }}
-      booking: ${{ steps.filter.outputs.booking }}
-      currency-converter: ${{ steps.filter.outputs.currency-converter }}
-      notification: ${{ steps.filter.outputs.notification }}
-      frontend: ${{ steps.filter.outputs.frontend }}
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      has-changes: ${{ steps.build-matrix.outputs.has-changes }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,13 +57,54 @@ jobs:
             frontend:
               - 'frontend/**'
 
+      - id: build-matrix
+        env:
+          FORCE_ALL: ${{ inputs.force-all }}
+          F_API_GATEWAY: ${{ steps.filter.outputs.api-gateway }}
+          F_USER_AUTH: ${{ steps.filter.outputs.user-auth }}
+          F_CAR_SERVICE: ${{ steps.filter.outputs.car-service }}
+          F_BOOKING: ${{ steps.filter.outputs.booking }}
+          F_CURRENCY: ${{ steps.filter.outputs.currency-converter }}
+          F_NOTIFICATION: ${{ steps.filter.outputs.notification }}
+          F_FRONTEND: ${{ steps.filter.outputs.frontend }}
+        run: |
+          set -euo pipefail
+          ITEMS=()
+
+          maybe_add() {
+            local flag="$1" service="$2" context="$3"
+            if [[ "$FORCE_ALL" == "true" || "$flag" == "true" ]]; then
+              ITEMS+=("{\"service\":\"$service\",\"context\":\"$context\"}")
+            fi
+          }
+
+          maybe_add "$F_API_GATEWAY"  api-gateway        apiGateway
+          maybe_add "$F_USER_AUTH"    user-auth          user-authManagement
+          maybe_add "$F_CAR_SERVICE"  car-service        carMicroservice
+          maybe_add "$F_BOOKING"      booking            carBookingMicroservice
+          maybe_add "$F_CURRENCY"     currency-converter currencyConverterMicroservice
+          maybe_add "$F_NOTIFICATION" notification       notificationMicroservice
+          maybe_add "$F_FRONTEND"     frontend           frontend
+
+          if [[ ${#ITEMS[@]} -eq 0 ]]; then
+            MATRIX='[]'
+            HAS_CHANGES='false'
+          else
+            MATRIX="[$(IFS=,; echo "${ITEMS[*]}")]"
+            HAS_CHANGES='true'
+          fi
+
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "has-changes=$HAS_CHANGES" >> "$GITHUB_OUTPUT"
+          echo "→ Matrix: $MATRIX"
+
   # ------------------------------------------------------------------
-  # 2. Azure-Config holen: ACR-Login-Server + api-gateway-FQDN für den
-  #    Frontend-Build. Läuft genau einmal und gibt die Werte als Outputs
-  #    an alle Service-Jobs weiter.
+  # 2. fetch-azure-config: ACR-Login-Server + api-gateway-FQDN holen.
+  #    Skip wenn keine Services geändert wurden.
   # ------------------------------------------------------------------
   fetch-azure-config:
     needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     outputs:
       acr-login-server: ${{ steps.config.outputs.acr-login-server }}
@@ -87,39 +129,17 @@ jobs:
           echo "→ API Gateway: https://$API_GW_FQDN"
 
   # ------------------------------------------------------------------
-  # 3. Build & Deploy: Matrix über alle 7 Services. Jeder Service-Job
-  #    skippt sich selbst per `if:` wenn der Pfad-Filter false war
-  #    (außer force-all=true via workflow_dispatch).
+  # 3. build-and-deploy: Dynamische Matrix nur über Services die in
+  #    detect-changes als geändert markiert wurden.
   # ------------------------------------------------------------------
   build-and-deploy:
     needs: [detect-changes, fetch-azure-config]
+    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - service: api-gateway
-            context: apiGateway
-            changed: ${{ needs.detect-changes.outputs.api-gateway }}
-          - service: user-auth
-            context: user-authManagement
-            changed: ${{ needs.detect-changes.outputs.user-auth }}
-          - service: car-service
-            context: carMicroservice
-            changed: ${{ needs.detect-changes.outputs.car-service }}
-          - service: booking
-            context: carBookingMicroservice
-            changed: ${{ needs.detect-changes.outputs.booking }}
-          - service: currency-converter
-            context: currencyConverterMicroservice
-            changed: ${{ needs.detect-changes.outputs.currency-converter }}
-          - service: notification
-            context: notificationMicroservice
-            changed: ${{ needs.detect-changes.outputs.notification }}
-          - service: frontend
-            context: frontend
-            changed: ${{ needs.detect-changes.outputs.frontend }}
-    if: ${{ matrix.changed == 'true' || inputs.force-all == true }}
+        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
