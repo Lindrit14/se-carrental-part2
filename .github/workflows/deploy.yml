@@ -1,0 +1,177 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force-all:
+        description: 'Alle 7 Services neu bauen (auch wenn nichts geändert)'
+        type: boolean
+        default: false
+
+# OIDC: id-token: write nötig damit azure/login@v2 sich gegen Azure AD
+# authentifiziert. contents: read damit der Code gechecked werden kann.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_RG: platform-rg
+  AZURE_ACR: platformacrlp13
+
+jobs:
+  # ------------------------------------------------------------------
+  # 1. Detect-Changes: nur die Services bauen deren Code sich änderte.
+  # ------------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      user-auth: ${{ steps.filter.outputs.user-auth }}
+      car-service: ${{ steps.filter.outputs.car-service }}
+      booking: ${{ steps.filter.outputs.booking }}
+      currency-converter: ${{ steps.filter.outputs.currency-converter }}
+      notification: ${{ steps.filter.outputs.notification }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api-gateway:
+              - 'apiGateway/**'
+            user-auth:
+              - 'user-authManagement/**'
+            car-service:
+              - 'carMicroservice/**'
+            booking:
+              - 'carBookingMicroservice/**'
+            currency-converter:
+              - 'currencyConverterMicroservice/**'
+            notification:
+              - 'notificationMicroservice/**'
+            frontend:
+              - 'frontend/**'
+
+  # ------------------------------------------------------------------
+  # 2. Azure-Config holen: ACR-Login-Server + api-gateway-FQDN für den
+  #    Frontend-Build. Läuft genau einmal und gibt die Werte als Outputs
+  #    an alle Service-Jobs weiter.
+  # ------------------------------------------------------------------
+  fetch-azure-config:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      acr-login-server: ${{ steps.config.outputs.acr-login-server }}
+      api-gateway-url: ${{ steps.config.outputs.api-gateway-url }}
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - id: config
+        run: |
+          ACR_LOGIN_SERVER=$(az acr show -n "$AZURE_ACR" --query loginServer -o tsv)
+          API_GW_FQDN=$(az containerapp show -n api-gateway -g "$AZURE_RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+
+          echo "acr-login-server=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
+          echo "api-gateway-url=https://$API_GW_FQDN" >> "$GITHUB_OUTPUT"
+
+          echo "→ ACR: $ACR_LOGIN_SERVER"
+          echo "→ API Gateway: https://$API_GW_FQDN"
+
+  # ------------------------------------------------------------------
+  # 3. Build & Deploy: Matrix über alle 7 Services. Jeder Service-Job
+  #    skippt sich selbst per `if:` wenn der Pfad-Filter false war
+  #    (außer force-all=true via workflow_dispatch).
+  # ------------------------------------------------------------------
+  build-and-deploy:
+    needs: [detect-changes, fetch-azure-config]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api-gateway
+            context: apiGateway
+            changed: ${{ needs.detect-changes.outputs.api-gateway }}
+          - service: user-auth
+            context: user-authManagement
+            changed: ${{ needs.detect-changes.outputs.user-auth }}
+          - service: car-service
+            context: carMicroservice
+            changed: ${{ needs.detect-changes.outputs.car-service }}
+          - service: booking
+            context: carBookingMicroservice
+            changed: ${{ needs.detect-changes.outputs.booking }}
+          - service: currency-converter
+            context: currencyConverterMicroservice
+            changed: ${{ needs.detect-changes.outputs.currency-converter }}
+          - service: notification
+            context: notificationMicroservice
+            changed: ${{ needs.detect-changes.outputs.notification }}
+          - service: frontend
+            context: frontend
+            changed: ${{ needs.detect-changes.outputs.frontend }}
+    if: ${{ matrix.changed == 'true' || inputs.force-all == true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR-Login (schreibt Docker-Creds für die ACR)
+        run: az acr login --name "$AZURE_ACR"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Frontend braucht zwei Build-Args: VITE_API_URL (zur Build-Zeit
+      # vom Vite-Bundler ins Bundle gebacken) + VITE_GOOGLE_MAPS_API_KEY.
+      # Die anderen 6 Services haben keine Build-Args.
+      - name: Build & Push (frontend)
+        if: matrix.service == 'frontend'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ needs.fetch-azure-config.outputs.acr-login-server }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ needs.fetch-azure-config.outputs.acr-login-server }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            VITE_API_URL=${{ needs.fetch-azure-config.outputs.api-gateway-url }}
+            VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+
+      - name: Build & Push (Backend-Services)
+        if: matrix.service != 'frontend'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ needs.fetch-azure-config.outputs.acr-login-server }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ needs.fetch-azure-config.outputs.acr-login-server }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Container App auf neues Image updaten
+        run: |
+          IMAGE="${{ needs.fetch-azure-config.outputs.acr-login-server }}/${{ matrix.service }}:${{ github.sha }}"
+          echo "→ az containerapp update -n ${{ matrix.service }} --image $IMAGE"
+          az containerapp update \
+            --name "${{ matrix.service }}" \
+            --resource-group "$AZURE_RG" \
+            --image "$IMAGE" \
+            --output none
+
+          echo "✓ ${{ matrix.service }} läuft jetzt mit $IMAGE"
