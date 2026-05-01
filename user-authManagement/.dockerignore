@@ -21,10 +21,7 @@ coverage.*
 # Docs / Local
 README.md
 CLAUDE.md
-deploy/azure/
-test/
 
 # Secrets
-secrets/
 *.pem
 *.key

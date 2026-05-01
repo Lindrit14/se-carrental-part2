@@ -43,9 +43,8 @@ make up
 
 That:
 
-1. Generates RSA keys for JWT (if missing) via `user-authManagement/scripts/gen-jwt-keys.sh`.
-2. Copies the **public** key to `shared-secrets/` so booking can verify JWTs.
-3. Builds and starts all containers.
+1. Generates the RSA JWT keypair into `shared-secrets/` (if missing) via `scripts/gen-jwt-keys.sh`. The public key is consumed by every service that verifies JWTs; only user-auth reads the private key.
+2. Builds and starts all containers.
 
 After it's healthy:
 
@@ -89,7 +88,7 @@ make clean    # stop + remove volumes (data loss)
 
 - Each service follows **Clean Architecture** (domain → application → infrastructure → interfaces).
 - Each service owns its own database — no shared schemas.
-- JWTs are RS256-signed by user-auth with `secrets/jwt_private.pem`.
+- JWTs are RS256-signed by user-auth with `shared-secrets/jwt_private.pem`.
   Other services verify locally with `shared-secrets/jwt_public.pem` — no
   network call to user-auth needed (stateless verification).
 - Booking holds a **read model** of users (`Customer` table), populated and

@@ -79,9 +79,7 @@ services:
     networks: [platform]
 
   user-auth:
-    build:
-      context: ./user-authManagement
-      dockerfile: deploy/docker/Dockerfile
+    build: ./user-authManagement
     image: user-auth:dev
     container_name: platform-user-auth
     environment:
@@ -98,7 +96,7 @@ services:
       ADMIN_BOOTSTRAP_EMAIL: "admin@uni.de"
       ADMIN_BOOTSTRAP_PASSWORD: "ChangeMeChangeMe"
     volumes:
-      - ./user-authManagement/secrets:/run/secrets:ro
+      - ./shared-secrets:/run/secrets:ro
     expose:
       - "8081"
     depends_on:

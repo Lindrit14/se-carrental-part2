@@ -29,14 +29,12 @@ ps: ## Show service status
 build: ## Rebuild images without starting
 	$(COMPOSE) build
 
-keys: ## Ensure JWT keys exist + public key copied to shared-secrets/
-	@if [ ! -f user-authManagement/secrets/jwt_private.pem ]; then \
-	  echo "Generating JWT keys via user-authManagement/scripts/gen-jwt-keys.sh"; \
-	  cd user-authManagement && ./scripts/gen-jwt-keys.sh ./secrets; \
+keys: ## Ensure JWT keypair exists in shared-secrets/
+	@if [ ! -f shared-secrets/jwt_private.pem ]; then \
+	  echo "Generating JWT keys via scripts/gen-jwt-keys.sh"; \
+	  ./scripts/gen-jwt-keys.sh shared-secrets; \
 	fi
-	@mkdir -p shared-secrets
-	@cp -f user-authManagement/secrets/jwt_public.pem shared-secrets/jwt_public.pem
-	@echo "shared-secrets/jwt_public.pem ready"
+	@echo "shared-secrets/jwt_{private,public}.pem ready"
 
 clean: down ## Stop platform and remove all volumes (DATA LOSS)
 	$(COMPOSE) down -v

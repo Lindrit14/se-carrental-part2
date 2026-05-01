@@ -1,5 +1,5 @@
 .PHONY: help run build test test-integration lint tidy fmt vet \
-        docker-build gen-keys clean
+        docker-build clean
 
 BINARY := server
 PKG    := ./cmd/server
@@ -37,10 +37,7 @@ vet: ## go vet
 	go vet ./...
 
 docker-build: ## Build production image (manual; usually built by platform compose)
-	docker build -f deploy/docker/Dockerfile -t $(IMAGE) .
-
-gen-keys: ## Generate RSA keypair for JWT (RS256)
-	@./scripts/gen-jwt-keys.sh
+	docker build -t $(IMAGE) .
 
 clean: ## Remove build artifacts
 	rm -rf bin dist coverage.*

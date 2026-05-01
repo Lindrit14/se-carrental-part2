@@ -7,7 +7,7 @@ ausführliche Doku gehört in `README.md` / `docs/`.
 
 User/Auth-Microservice in **Go (1.23+)**. REST-API für Authentifizierung
 und Profil-Management, Domain-Events über **RabbitMQ**. Persistenz in
-**MongoDB**. Deployment: **Docker → Azure Container Apps**.
+**MongoDB**. Container-Image via Multi-Stage Dockerfile.
 
 Der Service ist Teil einer Microservice-Landschaft. Er publisht Events,
 auf die andere Services reagieren — er kennt diese anderen Services nicht.
@@ -72,9 +72,7 @@ internal/
     dto/                       # Request- + Response-DTOs
 pkg/apperror/                  # Typisierte Fehler → HTTP-Status-Mapping
 api/openapi.yaml               # API-Spec (Source of Truth)
-deploy/docker/                 # Dockerfile, docker-compose.yml
-deploy/azure/                  # *.bicep, Deploy-Doku
-test/{integration,e2e}/        # Tests die echte Mongo/RabbitMQ brauchen
+Dockerfile                     # Built by the platform docker-compose
 ```
 
 ## RabbitMQ — Event-Contract
@@ -142,7 +140,9 @@ Der gesamte Stack wird vom Platform-Compose im Repo-Root gestartet
 | `make test-integration`   | Integration-Tests (testcontainers)             |
 | `make lint`               | golangci-lint                                  |
 | `make docker-build`       | Multi-Stage Image bauen (sonst über Platform-Compose) |
-| `make gen-keys`           | RSA-Keypair für JWT (RS256) erzeugen           |
+
+JWT-Schlüssel werden auf Platform-Ebene erzeugt: `cd .. && make keys`
+schreibt das Keypair nach `shared-secrets/jwt_{private,public}.pem`.
 
 ## Sicherheit
 
@@ -153,18 +153,6 @@ Der gesamte Stack wird vom Platform-Compose im Repo-Root gestartet
 - E-Mails werden vor Speicherung lowercased + getrimmt; Unique-Index auf `email`.
 - CORS nur für konfigurierte Origins (ENV `CORS_ALLOWED_ORIGINS`).
 - Security-Header: HSTS, X-Content-Type-Options, X-Frame-Options.
-
-## Deployment
-
-Ziel ist **Azure Container Apps**:
-
-- Image wird in **Azure Container Registry (ACR)** gepushed (Tag = Git-SHA).
-- Bicep-Templates in `deploy/azure/`.
-- Secrets (`MONGO_URI`, `JWT_PRIVATE_KEY`, `RABBITMQ_URL`) als ACA Secret-References,
-  optional aus Azure Key Vault.
-- KEDA-Scale-Rule auf HTTP-Concurrency, Min 1 / Max 5 Replicas.
-- MongoDB in Prod: Azure Cosmos DB for MongoDB API empfohlen.
-- RabbitMQ self-hosted als eigene Container App mit Persistent Storage (Azure Files).
 
 ## Was NICHT tun
 

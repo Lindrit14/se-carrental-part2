@@ -30,10 +30,8 @@ coverage.html
 Thumbs.db
 
 # Secrets / Keys
-secrets/
 *.pem
 *.key
-!deploy/azure/*.bicep
 
 # Build cache
 .cache/
