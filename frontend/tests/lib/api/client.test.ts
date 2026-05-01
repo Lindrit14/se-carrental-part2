@@ -26,7 +26,7 @@ describe('api/client', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await request<{ id: string }>('booking', '/api/v1/cars/42');
+    const result = await request<{ id: string }>('cars', '/api/v1/cars/42');
 
     expect(result).toEqual({ id: '42' });
     const [, init] = fetchMock.mock.calls[0]!;
@@ -60,7 +60,7 @@ describe('api/client', () => {
     const logout = vi.fn();
     configureClient({ refresh, logout });
 
-    const result = await request<{ ok: boolean }>('booking', '/api/v1/bookings/me');
+    const result = await request<{ ok: boolean }>('bookings', '/api/v1/bookings/me');
 
     expect(result).toEqual({ ok: true });
     expect(refresh).toHaveBeenCalledOnce();

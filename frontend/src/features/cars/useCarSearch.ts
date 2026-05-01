@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { bookingApi, type SearchCarsInput } from '@/lib/api/bookingApi';
+import { carsApi, type SearchCarsInput } from '@/lib/api/carsApi';
 
 export function useCarSearch(input: SearchCarsInput) {
   return useQuery({
     queryKey: ['cars', 'search', input],
-    queryFn: () => bookingApi.searchCars(input),
+    queryFn: () => carsApi.searchCars(input),
     staleTime: 60 * 1000,
   });
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, MapPin } from 'lucide-react';
-import { bookingApi } from '@/lib/api/bookingApi';
+import { carsApi } from '@/lib/api/carsApi';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -29,7 +29,7 @@ export function BookCarPage() {
 
   const { data: car, isLoading, isError } = useQuery({
     queryKey: ['car', carId],
-    queryFn: () => bookingApi.getCar(carId),
+    queryFn: () => carsApi.getCar(carId),
     enabled: !!carId,
   });
 
