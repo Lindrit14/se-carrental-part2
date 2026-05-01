@@ -11,7 +11,7 @@ interface CarSpringRepo extends JpaRepository<CarJpaEntity, String> {
 
     @Query("""
         SELECT c FROM CarJpaEntity c
-        WHERE (:loc IS NULL OR LOWER(c.location) LIKE LOWER(CONCAT('%', :loc, '%')))
+        WHERE (:loc IS NULL OR LOWER(c.location) LIKE :loc)
           AND (:cat IS NULL OR c.category = :cat)
         ORDER BY c.createdAt
         """)

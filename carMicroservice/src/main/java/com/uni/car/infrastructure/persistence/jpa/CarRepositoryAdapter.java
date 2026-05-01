@@ -6,6 +6,7 @@ import com.uni.car.domain.car.CarRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Repository
@@ -39,7 +40,13 @@ class CarRepositoryAdapter implements CarRepository {
 
     @Override
     public List<Car> search(String location, CarCategory category) {
-        return repo.search(location, category).stream()
+        // Pre-build the LIKE pattern in Java so the JPQL never calls LOWER on
+        // a bound parameter — PostgreSQL can't type-check LOWER(?) when the
+        // bind is null and falls back to bytea, which has no LOWER overload.
+        String pattern = (location == null || location.isBlank())
+                ? null
+                : "%" + location.toLowerCase(Locale.ROOT) + "%";
+        return repo.search(pattern, category).stream()
                 .map(CarJpaEntity::toDomain)
                 .toList();
     }
