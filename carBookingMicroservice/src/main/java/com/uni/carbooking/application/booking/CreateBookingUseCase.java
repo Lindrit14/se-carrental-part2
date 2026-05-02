@@ -78,6 +78,7 @@ public class CreateBookingUseCase {
                 new BookingEvents.BookingCreated(
                         booking.id(),
                         booking.customerId(),
+                        customer.externalUserId(),
                         booking.carId(),
                         booking.startDate().toString(),
                         booking.endDate().toString(),

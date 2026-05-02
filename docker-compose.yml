@@ -225,8 +225,13 @@ services:
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
       HTTP_PORT: "8084"
       NOTIFIER_TYPE: mock
+      FROM_NAME: "Car Rental"
+      USER_DB_PATH: /data/users.db
+      FRONTEND_BASE_URL: http://localhost:3000
     expose:
       - "8084"
+    volumes:
+      - notification-data:/data
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -256,6 +261,7 @@ volumes:
   mongo-data:
   cars-data:
   booking-data:
+  notification-data:
 
 networks:
   platform:

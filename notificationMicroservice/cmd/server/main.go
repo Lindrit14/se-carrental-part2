@@ -10,10 +10,13 @@ import (
 	"time"
 
 	"github.com/lindritprekaj/notification-service/internal/application"
+	"github.com/lindritprekaj/notification-service/internal/application/handlers"
 	"github.com/lindritprekaj/notification-service/internal/infrastructure/config"
+	"github.com/lindritprekaj/notification-service/internal/infrastructure/email"
 	httpinfra "github.com/lindritprekaj/notification-service/internal/infrastructure/http"
 	"github.com/lindritprekaj/notification-service/internal/infrastructure/notifier"
 	"github.com/lindritprekaj/notification-service/internal/infrastructure/rabbitmq"
+	"github.com/lindritprekaj/notification-service/internal/infrastructure/repository/sqlite"
 )
 
 func main() {
@@ -25,18 +28,51 @@ func main() {
 		os.Exit(1)
 	}
 
-	mock := notifier.NewMock()
-	dispatcher := application.NewDispatcher(mock.Send)
+	userRepo, err := sqlite.Open(cfg.UserDBPath)
+	if err != nil {
+		slog.Error("sqlite open", "err", err, "path", cfg.UserDBPath)
+		os.Exit(1)
+	}
+	defer userRepo.Close()
+	slog.Info("user read model ready", "path", cfg.UserDBPath)
 
+	renderer, err := email.NewRenderer()
+	if err != nil {
+		slog.Error("email renderer", "err", err)
+		os.Exit(1)
+	}
+
+	notif, err := notifier.New(notifier.Config{
+		Type:                      cfg.NotifierType,
+		ACSEndpoint:               cfg.ACSEndpoint,
+		ACSSenderAddress:          cfg.ACSSenderAddress,
+		ACSAuthMode:               cfg.ACSAuthMode,
+		ACSConnectionStringFile:   cfg.ACSConnectionStringFile,
+		ACSConnectionStringInline: cfg.ACSConnectionStringInline,
+		FromName:                  cfg.FromName,
+	})
+	if err != nil {
+		slog.Error("notifier init", "err", err)
+		os.Exit(1)
+	}
+	slog.Info("notifier ready", "type", cfg.NotifierType)
+
+	deps := &handlers.Deps{
+		Notifier:        notif,
+		UserRepo:        userRepo,
+		Renderer:        renderer,
+		FromName:        cfg.FromName,
+		FrontendBaseURL: cfg.FrontendBaseURL,
+	}
+
+	dispatcher := application.NewDispatcher(deps)
 	consumer := rabbitmq.NewConsumer(cfg.RabbitMQURL, dispatcher.Dispatch)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Start RabbitMQ consumer in background (reconnects automatically)
 	go consumer.Run(ctx)
 
-	// HTTP health server
 	srv := &http.Server{
 		Addr:         ":" + cfg.HTTPPort,
 		Handler:      httpinfra.NewRouter(consumer),

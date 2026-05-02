@@ -1,0 +1,16 @@
+Booking Confirmed
+
+Hi,
+
+Your booking has been confirmed.
+
+Booking ID:  {{.BookingID}}
+Car:         {{.CarID}}
+Pick-up:     {{.StartDate}}
+Return:      {{.EndDate}}
+Total:       {{.TotalAmount}} {{.TotalCurrency}}
+
+We look forward to seeing you. Safe travels!
+
+--
+This is an automated message — please do not reply.

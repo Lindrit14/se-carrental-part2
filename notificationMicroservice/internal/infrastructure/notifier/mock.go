@@ -5,11 +5,23 @@ import (
 	"log/slog"
 )
 
-// Mock writes notification intent to stdout. Used in all non-production envs.
+// Mock implements Notifier by writing structured logs to stdout.
+// Used for local dev and tests — no real email is sent.
 type Mock struct{}
 
 func NewMock() *Mock { return &Mock{} }
 
-func (m *Mock) Send(_ context.Context, notifType, detail string) {
-	slog.Info("[NOTIFICATION]", "type", notifType, "detail", detail)
+func (m *Mock) Send(_ context.Context, msg Message) error {
+	slog.Info("[NOTIFICATION]",
+		"to", redactEmail(msg.To),
+		"subject", msg.Subject,
+		"text_preview", preview(msg.TextBody, 200))
+	return nil
+}
+
+func preview(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
 }

@@ -1,0 +1,10 @@
+Booking Cancelled
+
+Hi,
+
+Your booking {{.BookingID}} has been cancelled.
+
+If this was unexpected, please contact our support team.
+
+--
+This is an automated message — please do not reply.

@@ -28,8 +28,11 @@ func declareTopology(ch *amqp.Channel) error {
 		return err
 	}
 
-	// Main notifications queue — after maxDeliveryAttempts nacks, message goes to DLX
+	// Main notifications queue — after maxDeliveryAttempts nacks, message goes to DLX.
+	// x-delivery-limit is a quorum-queue feature, so the queue must be declared as
+	// type=quorum. Classic queues reject the arg with PRECONDITION_FAILED.
 	args := amqp.Table{
+		"x-queue-type":           "quorum",
 		"x-dead-letter-exchange": DLXExchange,
 		"x-delivery-limit":       int32(maxDeliveryAttempts),
 	}

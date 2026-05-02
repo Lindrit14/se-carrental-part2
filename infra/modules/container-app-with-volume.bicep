@@ -80,6 +80,9 @@ param volumeMountPath string
 @description('Interner Bicep-Name des Volumes (egal welcher, muss konsistent sein)')
 param volumeName string = 'data-volume'
 
+@description('System-Assigned Managed Identity aktivieren? Wird für Azure-Plane-Auth (z.B. ACS Email) gebraucht.')
+param assignSystemIdentity bool = false
+
 // ---- Ingress-Block ---------------------------------------------------
 var ingressBase = {
   external: ingressType == 'external'
@@ -96,6 +99,9 @@ var ingress = ingressType == 'none' ? null : ingressWithPort
 resource app 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
   location: location
+  identity: {
+    type: assignSystemIdentity ? 'SystemAssigned' : 'None'
+  }
   properties: {
     managedEnvironmentId: environmentId
     configuration: {
@@ -152,3 +158,6 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
 // ---- Outputs ---------------------------------------------------------
 output appName string = app.name
 output fqdn string = ingressType == 'external' ? app.properties.configuration.ingress.fqdn : ''
+// principalId der System-Identity — leer falls nicht aktiviert. Wird für
+// Role-Assignments gegen ACS, Key Vault, etc. gebraucht.
+output principalId string = assignSystemIdentity ? app.identity.principalId : ''

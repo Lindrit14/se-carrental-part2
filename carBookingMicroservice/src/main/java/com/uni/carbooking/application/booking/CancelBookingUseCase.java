@@ -42,7 +42,7 @@ public class CancelBookingUseCase {
         publisher.publish(
                 BookingEvents.BOOKING_CANCELLED,
                 BookingEvents.BOOKING_CANCELLED,
-                new BookingEvents.BookingCancelled(b.id(), b.customerId())
+                new BookingEvents.BookingCancelled(b.id(), b.customerId(), customer.externalUserId())
         );
     }
 }

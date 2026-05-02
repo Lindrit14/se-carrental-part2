@@ -1,0 +1,11 @@
+Welcome to Car Rental!
+
+Hi,
+
+Your account ({{.Email}}) has been successfully created.
+You can now sign in and book cars at any of our locations.
+
+Happy driving!
+
+--
+This is an automated message — please do not reply.

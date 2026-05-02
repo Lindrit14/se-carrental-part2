@@ -8,4 +8,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o notification-service .
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /app/notification-service /notification-service
 EXPOSE 8084
+VOLUME ["/data"]
 ENTRYPOINT ["/notification-service"]

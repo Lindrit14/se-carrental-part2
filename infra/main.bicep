@@ -170,6 +170,22 @@ module bookingDbStorageMount 'modules/env-storage.bicep' = {
   }
 }
 
+// Notification SQLite-Read-Model — kleine, langlebige Datei. Read-write,
+// Single-Replica (keine Concurrency-Anforderung > 1 Pod auf SQLite).
+module notificationStorageMount 'modules/env-storage.bicep' = {
+  name: 'storage-mount-notification'
+  dependsOn: [
+    infra
+  ]
+  params: {
+    environmentName: infra.outputs.environmentName
+    storageMountName: 'notification-mount'
+    storageAccountName: infra.outputs.storageAccountName
+    storageAccountKey: infra.outputs.storageAccountKey
+    fileShareName: 'notification-data'
+  }
+}
+
 // =====================================================================
 // 3. DATENBANK-CONTAINER-APPS (mit persistentem Volume)
 // =====================================================================
@@ -651,8 +667,58 @@ module currencyConverter 'modules/container-app.bicep' = {
   }
 }
 
+// =====================================================================
+// AZURE COMMUNICATION SERVICES — Email für Notification-Service
+// =====================================================================
+// ACS hat zwei Resourcen:
+//   - communicationService:  Data-Plane + Endpoint, an dem die App ruft
+//   - emailService + domain: hostet die Sender-Domain (verifiziert)
+// Beide werden über linkedDomains verbunden.
+//
+// AzureManagedDomain liefert eine *.azurecomm.net Sender-Domain ohne
+// DNS-Setup — perfekt für Demos / Tests. Für Production-Volume später
+// gegen Custom-Domain mit SPF/DKIM tauschen.
+//
+// ACS-Resources sind global (kein Region-Param), aber dataLocation steuert
+// wo die E-Mail-Daten residieren. 'Europe' für GDPR-konformen Betrieb.
+
+resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {
+  name: '${prefix}-email-${uniqueSuffix}'
+  location: 'global'
+  properties: {
+    dataLocation: 'Europe'
+  }
+}
+
+resource emailDomain 'Microsoft.Communication/emailServices/domains@2023-04-01' = {
+  parent: emailService
+  name: 'AzureManagedDomain'
+  location: 'global'
+  properties: {
+    domainManagement: 'AzureManaged'
+    userEngagementTracking: 'Disabled'
+  }
+}
+
+resource communicationService 'Microsoft.Communication/communicationServices@2023-04-01' = {
+  name: '${prefix}-comm-${uniqueSuffix}'
+  location: 'global'
+  properties: {
+    dataLocation: 'Europe'
+    linkedDomains: [
+      emailDomain.id
+    ]
+  }
+}
+
+// AzureManagedDomain legt automatisch einen DoNotReply-Sender an.
+var acsSenderAddress = 'DoNotReply@${emailDomain.properties.fromSenderDomain}'
+var acsEndpoint = 'https://${communicationService.properties.hostName}'
+
 // ---- notification (internal) -----------------------------------------
-module notification 'modules/container-app.bicep' = {
+// Eigenes Read-Model in SQLite (auf Azure-File-Share gemountet) und
+// System-Identity für ACS-Zugriff via Managed Identity.
+module notification 'modules/container-app-with-volume.bicep' = {
   name: 'app-notification'
   params: {
     name: 'notification'
@@ -673,7 +739,31 @@ module notification 'modules/container-app.bicep' = {
       }
       {
         name: 'NOTIFIER_TYPE'
-        value: 'mock'
+        value: 'acs'
+      }
+      {
+        name: 'FROM_NAME'
+        value: 'Car Rental'
+      }
+      {
+        name: 'USER_DB_PATH'
+        value: '/data/users.db'
+      }
+      {
+        name: 'FRONTEND_BASE_URL'
+        value: frontendOrigin
+      }
+      {
+        name: 'ACS_ENDPOINT'
+        value: acsEndpoint
+      }
+      {
+        name: 'ACS_SENDER_ADDRESS'
+        value: acsSenderAddress
+      }
+      {
+        name: 'ACS_AUTH_MODE'
+        value: 'managed_identity'
       }
     ]
     acrLoginServer: infra.outputs.acrLoginServer
@@ -681,8 +771,34 @@ module notification 'modules/container-app.bicep' = {
     acrPassword: infra.outputs.acrPassword
     cpu: '0.25'
     memory: '0.5Gi'
+    // SQLite verträgt nur einen Writer → maxReplicas=1.
     minReplicas: 1
-    maxReplicas: 2
+    maxReplicas: 1
+    volumeStorageName: notificationStorageMount.outputs.storageName
+    volumeMountPath: '/data'
+    assignSystemIdentity: true
+  }
+}
+
+// Role-Assignment: Notification-App-Identity bekommt "Contributor" auf
+// dem Communication Service. Contributor erlaubt das Versenden via
+// Entra-Auth (Bearer-Token-Scope: https://communication.azure.com/.default).
+// Engerer Scope wäre möglich (z.B. "Communication and Email Service Owner"),
+// aber Contributor ist universell verfügbar und funktioniert sicher.
+var contributorRoleId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b24988ac-6180-42a0-ab88-20f7382dd24c'
+)
+
+// Name muss zur Deployment-Start-Zeit berechenbar sein, deshalb guid()
+// auf statische Werte (Scope + logischer Name + Rolle) statt principalId.
+resource notificationAcsRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(communicationService.id, 'notification', 'contributor')
+  scope: communicationService
+  properties: {
+    principalId: notification.outputs.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: contributorRoleId
   }
 }
 
@@ -717,3 +833,5 @@ output acrLoginServer string = infra.outputs.acrLoginServer
 output acrName string = infra.outputs.acrName
 output frontendUrl string = 'https://${frontend.outputs.fqdn}'
 output apiGatewayUrl string = 'https://${apiGateway.outputs.fqdn}'
+output acsEndpoint string = acsEndpoint
+output acsSenderAddress string = acsSenderAddress

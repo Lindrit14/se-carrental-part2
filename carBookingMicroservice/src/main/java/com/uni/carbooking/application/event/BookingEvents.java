@@ -14,6 +14,7 @@ public final class BookingEvents {
     public record BookingCreated(
             String bookingId,
             String customerId,
+            String customerExternalUserId,
             String carId,
             String startDate,
             String endDate,
@@ -25,7 +26,8 @@ public final class BookingEvents {
 
     public record BookingCancelled(
             String bookingId,
-            String customerId
+            String customerId,
+            String customerExternalUserId
     ) {}
 
     private BookingEvents() {}
