@@ -3,6 +3,7 @@ import type { Car, CarCategory } from '@/domain/car';
 import { Card, CardContent, CardFooter } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Price } from '@/components/ui/Price';
+import { getCarImage } from '@/lib/carImages';
 
 const CATEGORY_LABEL: Record<CarCategory, string> = {
   SMALL: 'Small car',
@@ -22,7 +23,15 @@ interface CarCardProps {
 
 export function CarCard({ car, action, showLicensePlate }: CarCardProps) {
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col overflow-hidden">
+      <div className="aspect-[16/9] w-full overflow-hidden bg-zinc-100">
+        <img
+          src={getCarImage(car)}
+          alt={`${car.brand} ${car.model}`}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      </div>
       <CardContent className="flex flex-1 flex-col gap-4 p-6">
         <div className="flex items-start justify-between gap-2">
           <div>

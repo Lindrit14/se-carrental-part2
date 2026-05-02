@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Price } from '@/components/ui/Price';
 import { CreateBookingDialog } from '@/features/bookings/CreateBookingDialog';
 import { useDisplayCurrency } from '@/features/currency/useDisplayCurrency';
+import { getCarImage } from '@/lib/carImages';
 import type { CarCategory } from '@/domain/car';
 
 const CATEGORY_LABEL: Record<CarCategory, string> = {
@@ -58,6 +59,14 @@ export function BookCarPage() {
       <Button variant="ghost" size="sm" className="self-start" onClick={() => navigate(-1)}>
         <ArrowLeft className="h-4 w-4" /> Back
       </Button>
+
+      <div className="aspect-[21/9] w-full overflow-hidden rounded-lg bg-zinc-100">
+        <img
+          src={getCarImage(car)}
+          alt={`${car.brand} ${car.model}`}
+          className="h-full w-full object-cover"
+        />
+      </div>
 
       <div className="rounded-lg border border-zinc-200 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
