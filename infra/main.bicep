@@ -36,6 +36,28 @@ param jwtPublicKey string
 // Services. CI/CD ersetzt das später, sobald die Images gebuildet sind.
 var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
+// ---- Service-Discovery URLs ------------------------------------------
+// Container Apps internal Ingress routet anhand des Host-Headers, deshalb
+// muss der volle FQDN benutzt werden (<app>.internal.<env-default-domain>).
+// HTTP wird automatisch auf HTTPS umgeleitet — wir nutzen direkt HTTPS,
+// dann sparen wir uns 301-Hops und die kaputten Cross-Service-Redirects.
+var envDomain = infra.outputs.environmentDefaultDomain
+var userAuthUrl = 'https://user-auth.internal.${envDomain}'
+var carServiceUrl = 'https://car-service.internal.${envDomain}'
+var bookingServiceUrl = 'https://booking.internal.${envDomain}'
+// gRPC läuft mit transport=http2 und allowInsecure=true — Cleartext H2.
+// HTTPS-Variante würde TLS-Setup im Spring-gRPC-Client erfordern; daher
+// hier weiter Port 80 (cleartext H2) — sollte mit der kürzlich
+// allowInsecure=true Konfig direkt funktionieren.
+var currencyConverterGrpcAddress = 'currency-converter.internal.${envDomain}:80'
+// Frontend ist external — kein .internal.
+var frontendOrigin = 'https://frontend.${envDomain}'
+// CORS-Origin-Liste die ALLE Backends teilen (Gateway + Downstream).
+// Architektur-Ziel: nur Gateway hat CORS — bis Phase-5 Cleanup fertig ist
+// haben aber alle Backend-Services noch ihre eigene CORS-Config, die genau
+// die gleichen Origins akzeptieren muss damit der Forward nicht 403 wirft.
+var corsAllowedOrigins = 'http://localhost:3000,http://localhost:5173,${frontendOrigin}'
+
 // ---- JWT Secret-Files Helper -----------------------------------------
 // Wird an die 4 Apps weitergereicht, die JWT verifizieren/signieren.
 // Pfade matchen exakt das Compose-Setup, sodass die JWT_*_FILE Env-Vars
@@ -344,15 +366,15 @@ module apiGateway 'modules/container-app.bicep' = {
       }
       {
         name: 'USER_AUTH_URL'
-        value: 'http://user-auth'
+        value: userAuthUrl
       }
       {
         name: 'CAR_SERVICE_URL'
-        value: 'http://car-service'
+        value: carServiceUrl
       }
       {
         name: 'BOOKING_SERVICE_URL'
-        value: 'http://booking'
+        value: bookingServiceUrl
       }
       {
         name: 'REDIS_HOST'
@@ -368,7 +390,7 @@ module apiGateway 'modules/container-app.bicep' = {
       }
       {
         name: 'CORS_ALLOWED_ORIGINS'
-        value: 'http://localhost:3000,http://localhost:5173'
+        value: corsAllowedOrigins
       }
     ]
     acrLoginServer: infra.outputs.acrLoginServer
@@ -442,6 +464,10 @@ module userAuth 'modules/container-app.bicep' = {
         name: 'ADMIN_BOOTSTRAP_PASSWORD'
         value: 'ChangeMeChangeMe'
       }
+      {
+        name: 'CORS_ALLOWED_ORIGINS'
+        value: corsAllowedOrigins
+      }
     ]
     acrLoginServer: infra.outputs.acrLoginServer
     acrUsername: infra.outputs.acrUsername
@@ -488,13 +514,15 @@ module carService 'modules/container-app.bicep' = {
       }
       {
         name: 'CURRENCY_CONVERTER_GRPC_ADDRESS'
-        // currency-converter läuft mit transport=http2 und allowInsecure;
-        // internal HTTP/2-Ingress terminiert auf Port 80 zum targetPort 9000.
-        value: 'currency-converter:80'
+        value: currencyConverterGrpcAddress
       }
       {
         name: 'CURRENCY_CONVERTER_GRPC_DEADLINE_MS'
         value: '5000'
+      }
+      {
+        name: 'CORS_ALLOWED_ORIGINS'
+        value: corsAllowedOrigins
       }
     ]
     acrLoginServer: infra.outputs.acrLoginServer
@@ -558,7 +586,7 @@ module booking 'modules/container-app.bicep' = {
       }
       {
         name: 'CURRENCY_CONVERTER_GRPC_ADDRESS'
-        value: 'currency-converter:80'
+        value: currencyConverterGrpcAddress
       }
       {
         name: 'CURRENCY_CONVERTER_GRPC_DEADLINE_MS'
@@ -566,7 +594,11 @@ module booking 'modules/container-app.bicep' = {
       }
       {
         name: 'CAR_SERVICE_URL'
-        value: 'http://car-service'
+        value: carServiceUrl
+      }
+      {
+        name: 'CORS_ALLOWED_ORIGINS'
+        value: corsAllowedOrigins
       }
     ]
     acrLoginServer: infra.outputs.acrLoginServer

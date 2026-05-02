@@ -150,6 +150,13 @@ output acrPassword string = acr.listCredentials().passwords[0].value
 output environmentId string = environment.id
 output environmentName string = environment.name
 
+// Default-Domain wird für Service-Discovery zwischen Container Apps gebraucht:
+//   - Internal-FQDN:  <app>.internal.<defaultDomain>
+//   - External-FQDN:  <app>.<defaultDomain>
+// Spring Cloud Gateway o.ä. brauchen den vollen FQDN, weil der interne LB
+// anhand des Host-Headers routet — Short-Hostname (http://user-auth) bringt 404.
+output environmentDefaultDomain string = environment.properties.defaultDomain
+
 output storageAccountName string = storageAccount.name
 
 @secure()
