@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -33,18 +34,47 @@ func Open(dbPath string) (*UserRepo, error) {
 		}
 	}
 
-	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(on)", dbPath)
+	// journal_mode=DELETE — WAL needs shared memory mapping which is unreliable
+	// over SMB (Azure Files). DELETE is plain on-disk journaling, SMB-safe.
+	// busy_timeout=30000 — Container Apps rolling deploys briefly run two
+	// replicas; the incoming pod waits up to 30s for the outgoing pod to
+	// release the lock instead of crashing with SQLITE_BUSY.
+	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(DELETE)&_pragma=busy_timeout(30000)&_pragma=foreign_keys(on)", dbPath)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("sqlite open: %w", err)
 	}
 	db.SetMaxOpenConns(1) // sqlite handles concurrency itself; one writer is plenty for our load
 
-	if _, err := db.ExecContext(context.Background(), schemaSQL); err != nil {
+	// Retry the schema migration: even with busy_timeout, the first
+	// connection-establishing operation can hit transient locks while the
+	// previous revision is finishing its shutdown.
+	if err := migrateWithRetry(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("sqlite migrate: %w", err)
 	}
 	return &UserRepo{db: db}, nil
+}
+
+func migrateWithRetry(db *sql.DB) error {
+	const attempts = 6
+	delay := 2 * time.Second
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		_, err := db.ExecContext(ctx, schemaSQL)
+		cancel()
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		slog.Warn("sqlite migrate locked, retrying", "attempt", i+1, "err", err)
+		time.Sleep(delay)
+		if delay < 16*time.Second {
+			delay *= 2
+		}
+	}
+	return lastErr
 }
 
 func (r *UserRepo) Close() error { return r.db.Close() }
