@@ -16,7 +16,7 @@ import (
 	httpinfra "github.com/lindritprekaj/notification-service/internal/infrastructure/http"
 	"github.com/lindritprekaj/notification-service/internal/infrastructure/notifier"
 	"github.com/lindritprekaj/notification-service/internal/infrastructure/rabbitmq"
-	"github.com/lindritprekaj/notification-service/internal/infrastructure/repository/sqlite"
+	redisrepo "github.com/lindritprekaj/notification-service/internal/infrastructure/repository/redis"
 )
 
 func main() {
@@ -28,13 +28,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	userRepo, err := sqlite.Open(cfg.UserDBPath)
+	userRepo, err := redisrepo.New(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, cfg.RedisKeyPrefix)
 	if err != nil {
-		slog.Error("sqlite open", "err", err, "path", cfg.UserDBPath)
+		slog.Error("redis open", "err", err, "addr", cfg.RedisAddr)
 		os.Exit(1)
 	}
 	defer userRepo.Close()
-	slog.Info("user read model ready", "path", cfg.UserDBPath)
+	slog.Info("user read model ready", "backend", "redis", "addr", cfg.RedisAddr)
 
 	renderer, err := email.NewRenderer()
 	if err != nil {

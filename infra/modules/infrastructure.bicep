@@ -120,17 +120,6 @@ resource bookingDbShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2
   }
 }
 
-// notification-data hostet die SQLite-Datei mit dem user_id→email Read-Model.
-// 5 GiB reicht großzügig (jeder User ist <1 KB).
-resource notificationShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = {
-  parent: fileService
-  name: 'notification-data'
-  properties: {
-    shareQuota: 5
-    enabledProtocols: 'SMB'
-  }
-}
-
 // ---- Container Apps Managed Environment ------------------------------
 // Sammelt alle Apps, hostet das interne DNS und schickt Logs/Metrics
 // an Log Analytics.

@@ -21,8 +21,11 @@ type Config struct {
 	ACSConnectionStringFile  string
 	ACSConnectionStringInline string
 
-	// Local user→email read model
-	UserDBPath string
+	// Redis-backed user→email read model
+	RedisAddr      string
+	RedisPassword  string
+	RedisDB        int
+	RedisKeyPrefix string
 
 	// Used to build the password-reset link in emails.
 	FrontendBaseURL string
@@ -39,7 +42,10 @@ func Load() (*Config, error) {
 		ACSAuthMode:               getEnv("ACS_AUTH_MODE", "managed_identity"),
 		ACSConnectionStringFile:   getEnv("ACS_CONNECTION_STRING_FILE", ""),
 		ACSConnectionStringInline: getEnv("ACS_CONNECTION_STRING", ""),
-		UserDBPath:                getEnv("USER_DB_PATH", "/data/users.db"),
+		RedisAddr:                 getEnv("REDIS_ADDR", "redis:6379"),
+		RedisPassword:             getEnv("REDIS_PASSWORD", ""),
+		RedisDB:                   getEnvInt("REDIS_DB", 0),
+		RedisKeyPrefix:            getEnv("REDIS_KEY_PREFIX", "notif"),
 		FrontendBaseURL:           getEnv("FRONTEND_BASE_URL", ""),
 	}
 	if err := c.validate(); err != nil {
@@ -55,8 +61,8 @@ func (c *Config) validate() error {
 	if _, err := strconv.Atoi(c.HTTPPort); err != nil {
 		return fmt.Errorf("HTTP_PORT must be numeric: %w", err)
 	}
-	if c.UserDBPath == "" {
-		return fmt.Errorf("USER_DB_PATH is required")
+	if c.RedisAddr == "" {
+		return fmt.Errorf("REDIS_ADDR is required")
 	}
 
 	switch strings.ToLower(c.NotifierType) {
@@ -90,4 +96,16 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
+	}
+	return n
 }

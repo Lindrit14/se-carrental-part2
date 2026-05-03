@@ -73,6 +73,9 @@ param maxReplicas int = 1
 @secure()
 param secretFiles object = {}
 
+@description('System-Assigned Managed Identity aktivieren? Wird für Azure-Plane-Auth (z.B. ACS Email) gebraucht.')
+param assignSystemIdentity bool = false
+
 // ---- Ingress-Block je nach Typ aufbauen ------------------------------
 // 'none' → kein Ingress; sonst external/internal mit ggf. exposedPort.
 var ingressBase = {
@@ -116,6 +119,9 @@ var secretVolumeRefs = [for f in items(secretFiles): {
 resource app 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
   location: location
+  identity: {
+    type: assignSystemIdentity ? 'SystemAssigned' : 'None'
+  }
   properties: {
     managedEnvironmentId: environmentId
     configuration: {
@@ -170,3 +176,6 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
 // ---- Outputs ---------------------------------------------------------
 output appName string = app.name
 output fqdn string = ingressType == 'external' ? app.properties.configuration.ingress.fqdn : ''
+// principalId der System-Identity — leer falls nicht aktiviert. Wird für
+// Role-Assignments gegen ACS, Key Vault, etc. gebraucht.
+output principalId string = assignSystemIdentity ? app.identity.principalId : ''

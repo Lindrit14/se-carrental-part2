@@ -170,22 +170,6 @@ module bookingDbStorageMount 'modules/env-storage.bicep' = {
   }
 }
 
-// Notification SQLite-Read-Model — kleine, langlebige Datei. Read-write,
-// Single-Replica (keine Concurrency-Anforderung > 1 Pod auf SQLite).
-module notificationStorageMount 'modules/env-storage.bicep' = {
-  name: 'storage-mount-notification'
-  dependsOn: [
-    infra
-  ]
-  params: {
-    environmentName: infra.outputs.environmentName
-    storageMountName: 'notification-mount'
-    storageAccountName: infra.outputs.storageAccountName
-    storageAccountKey: infra.outputs.storageAccountKey
-    fileShareName: 'notification-data'
-  }
-}
-
 // =====================================================================
 // 3. DATENBANK-CONTAINER-APPS (mit persistentem Volume)
 // =====================================================================
@@ -716,9 +700,10 @@ var acsSenderAddress = 'DoNotReply@${emailDomain.properties.fromSenderDomain}'
 var acsEndpoint = 'https://${communicationService.properties.hostName}'
 
 // ---- notification (internal) -----------------------------------------
-// Eigenes Read-Model in SQLite (auf Azure-File-Share gemountet) und
-// System-Identity für ACS-Zugriff via Managed Identity.
-module notification 'modules/container-app-with-volume.bicep' = {
+// Stateless: user_id→email Read-Model läuft gegen Redis (siehe redis
+// Container App). System-Identity wird für ACS-Zugriff via Managed
+// Identity gebraucht.
+module notification 'modules/container-app.bicep' = {
   name: 'app-notification'
   params: {
     name: 'notification'
@@ -746,8 +731,8 @@ module notification 'modules/container-app-with-volume.bicep' = {
         value: 'Car Rental'
       }
       {
-        name: 'USER_DB_PATH'
-        value: '/data/users.db'
+        name: 'REDIS_ADDR'
+        value: 'redis:6379'
       }
       {
         name: 'FRONTEND_BASE_URL'
@@ -771,11 +756,8 @@ module notification 'modules/container-app-with-volume.bicep' = {
     acrPassword: infra.outputs.acrPassword
     cpu: '0.25'
     memory: '0.5Gi'
-    // SQLite verträgt nur einen Writer → maxReplicas=1.
     minReplicas: 1
     maxReplicas: 1
-    volumeStorageName: notificationStorageMount.outputs.storageName
-    volumeMountPath: '/data'
     assignSystemIdentity: true
   }
 }
